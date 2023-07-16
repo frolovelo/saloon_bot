@@ -3,7 +3,8 @@ from config import TOKEN
 from google_sheet import GoogleSheets
 from telebot.callback_data import CallbackData, CallbackDataFilter
 from telebot import types, TeleBot
-from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardRemove
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardRemove, \
+    ReplyKeyboardMarkup
 from telebot.async_telebot import AsyncTeleBot
 from telebot.asyncio_filters import AdvancedCustomFilter
 
@@ -12,6 +13,7 @@ import telebot_calendar
 bot = TeleBot(TOKEN)
 client_dict = {}
 calendar_dict = {}
+client_phone_number = {}  # 467168798: '+79522600066'
 
 
 # client1 = GoogleSheets()
@@ -27,16 +29,44 @@ calendar_dict = {}
 # print(client1)
 
 
-@bot.message_handler(commands=['help', 'start'])
+@bot.message_handler(commands=['start'])
+def check_phone_number(message):
+    if client_phone_number.get(message.chat.id, None) is None:
+        markup = ReplyKeyboardMarkup(one_time_keyboard=True)
+        button_phone = types.KeyboardButton(text="Отправить телефон 📞",
+                                            request_contact=True)
+        markup.add(button_phone)
+        bot.send_message(message.chat.id, 'Для записи на услуги требуется номер телефона.',
+                         reply_markup=markup)
+
+        @bot.message_handler(content_types=['contact'])
+        def contact(message_contact):
+            if message_contact.contact is not None:
+                print(message_contact.contact)
+                client_phone_number[message.chat.id] = message_contact.contact.phone_number
+                choice_service(message)
+
+        @bot.message_handler(content_types=['text'])
+        def any_word_before_number(message_any):
+            bot.send_message(message_any.chat.id, 'Нажмите кнопку, чтобы поделиться номером телефона.'
+                                                  '\nБез телефона запись невозможна!')
+    else:
+        choice_service(message)
+
+
 def choice_service(message):
     '''Выбор услуги для записи'''
-    client = GoogleSheets(message.chat.id)
-    client_dict[message.chat.id] = client
+    if client_dict.get(message.chat.id, None) is None:
+        client = GoogleSheets(message.chat.id)
+        client_dict[message.chat.id] = client
+    else:
+        client = client_dict[message.chat.id]
     all_serv = client.get_services()
     client.dct_master_service = all_serv
     markup = InlineKeyboardMarkup(row_width=3)
     markup.add(*[InlineKeyboardButton(text=x, callback_data=x) for x in all_serv.keys()])
     bot.send_message(message.chat.id, "Выбери услугу:", reply_markup=markup)
+    # bot.send_message(message.chat.id, message)
 
 
 @bot.callback_query_handler(func=lambda call: call.data in client_dict[call.message.chat.id].dct_master_service.keys())
@@ -50,21 +80,25 @@ def choice_master(call):
     dct = client.dct_master_service
     markup = InlineKeyboardMarkup(row_width=2)
     markup.add(*[InlineKeyboardButton(text=x, callback_data=x) for x in dct[name_ser]])
+    markup.add(InlineKeyboardButton(text='Любой мастер', callback_data='any'))
 
     bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Выбери Мастера:",
                           parse_mode='Markdown')
     bot.edit_message_reply_markup(call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
 
 
-@bot.callback_query_handler(func=lambda call: call.data in client_dict[call.message.chat.id].dct_master_service[
-    client_dict[call.message.chat.id].name_service])
+@bot.callback_query_handler(
+    func=lambda call: (call.data in client_dict[call.message.chat.id].dct_master_service
+    [client_dict[call.message.chat.id].name_service]) or (call.data == 'any')
+)
 def choice_date(call):
     '''
     Обработка inline callback запросов
     Выбор даты
     '''
     client = client_dict[call.message.chat.id]
-    client.name_master = call.data
+    if call.data != 'any':
+        client.name_master = call.data
     lst = client.get_all_days()
     lst = list(map(lambda x: datetime.strptime(x, '%d.%m.%y').date(), lst))
     client.lst_currant_date = lst
@@ -125,7 +159,12 @@ def set_time(call):
     '''
     client = client_dict[call.message.chat.id]
     client.time_record = call.data
-    id_client = f"id:{str(call.message.chat.id)}\n@{str(call.from_user.username)}"
+    id_client = f"id: {str(call.message.chat.id)}\n@{str(call.from_user.username)}\n"
+    if client_phone_number.get(call.message.chat.id, None) is not None:
+        if client_phone_number[call.message.chat.id] != '':
+            id_client += 'tel: ' + client_phone_number[call.message.chat.id]
+        else:
+            id_client += 'tel: None'
     print(id_client)
     if client.set_time(id_client):
         bot.delete_message(call.message.chat.id, call.message.message_id)
