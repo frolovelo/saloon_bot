@@ -65,7 +65,7 @@ def choice_date(call):
     '''
     client = client_dict[call.message.chat.id]
     client.name_master = call.data
-    lst = client.get_all_days(client.name_service)
+    lst = client.get_all_days()
     lst = list(map(lambda x: datetime.strptime(x, '%d.%m.%y').date(), lst))
     client.lst_currant_date = lst
     calendar_dict[call.message.chat.id] = str(call.message.chat.id)
@@ -95,13 +95,12 @@ def choice_time(call: CallbackQuery):
     )
 
     if action == "DAY":
-        date_act = datetime(int(year), int(month), int(day)).strftime('%d.%m.%y')
-        lst_times = client.get_free_time(date_act)
+        client.date_record = datetime(int(year), int(month), int(day)).strftime('%d.%m.%y')
+        lst_times = client.get_free_time()
+
         markup = InlineKeyboardMarkup(row_width=4)
-        for i in lst_times['Время']:
-            print(i)
-            print(type(i))
         markup.add(*[InlineKeyboardButton(text=x, callback_data=x) for x in lst_times['Время']])
+
         bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
         bot.send_message(
             chat_id=call.from_user.id,
@@ -125,9 +124,10 @@ def set_time(call):
     Выбор времени
     '''
     client = client_dict[call.message.chat.id]
-    id_client = str(call.message.chat.id) + str(call.message.from_user.id)
+    client.time_record = call.data
+    id_client = f"id:{str(call.message.chat.id)}\n@{str(call.from_user.username)}"
     print(id_client)
-    if client.set_time(call.data, id_client):
+    if client.set_time(id_client):
         bot.delete_message(call.message.chat.id, call.message.message_id)
         bot.send_message(call.message.chat.id, f'Успешно записал вас {client}')
     else:

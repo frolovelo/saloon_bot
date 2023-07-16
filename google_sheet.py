@@ -30,8 +30,8 @@ def time_score(func):
 
 
 class GoogleSheets:
-    def __init__(self, cookie):
-        self.cookie = cookie
+    def __init__(self, client_id):
+        self.client_id = client_id
         self.dct_master_service = None
         self.lst_currant_date = None
         self.dct_currant_time = None
@@ -43,7 +43,7 @@ class GoogleSheets:
         self.ignor_worksheets = ['Шаблон', 'Работники']
 
     def __str__(self):
-        return f'{self.cookie, self.name_service, self.name_master, self.date_record, self.time_record}'
+        return f'{self.client_id, self.name_service, self.name_master, self.date_record, self.time_record}'
 
     @staticmethod
     def time_absolut(tm):
@@ -52,7 +52,10 @@ class GoogleSheets:
         return col
 
     def get_services(self) -> dict:
-        """Названия актуальных услуг и имена мастеров"""
+        """
+        Названия актуальных услуг и имена мастеров
+        return dict{name_service: name_master}
+        """
         dct = {}
         ws = sh.worksheet('Работники')
         for i in ws.get_all_records():
@@ -61,12 +64,15 @@ class GoogleSheets:
         self.dct_master_service = dct
         return dct
 
-    def get_all_days(self, name_service) -> list:
+    def get_all_days(self) -> list:
         """ВСЕ доступные дни для записи на определенную услугу"""
 
         def actual_date(sheet_name, count_days=7) -> bool:
-            """Проверяет по названию листа актуальные даты для записи на ближайшие 7 дней,
-             а также наличие свободного времени """
+            """
+            Проверяет по названию листа актуальные даты для записи на ближайшие 7 дней,
+            а также наличие свободного времени
+            return: bool
+            """
             if sheet_name.title not in self.ignor_worksheets:
                 if datetime.now().date() <= \
                         datetime.strptime(sheet_name.title, '%d.%m.%y').date() <= \
@@ -75,11 +81,11 @@ class GoogleSheets:
                     for dct in val:
                         if self.name_master is not None:
                             if dct['Мастер'].strip() == self.name_master:
-                                if dct['Услуга'].strip() == name_service:
+                                if dct['Услуга'].strip() == self.name_service:
                                     for k, v in dct.items():
                                         if str(v).strip() == '':
                                             return sheet_name.title.strip()
-                        elif dct['Услуга'].strip() == name_service:
+                        elif dct['Услуга'].strip() == self.name_service:
                             for k, v in dct.items():
                                 if str(v).strip() == '':
                                     return sheet_name.title.strip()
@@ -88,14 +94,14 @@ class GoogleSheets:
         with ThreadPoolExecutor(8) as executor:  # Без потоков - время 2.5 сек
             res = executor.map(actual_date, sh.worksheets())
             res = list(filter(lambda x: type(x) is str, res))
-        self.name_service = name_service
+
         return res
 
-    def get_free_time(self, date_rec: str) -> dict:
+    def get_free_time(self) -> dict:
         """Функция выгружает ВСЕ СВОБОДНОЕ ВРЕМЯ для определенной ДАТЫ"""
         dct = {}
         try:
-            all_val = sh.worksheet(date_rec).get_all_records()
+            all_val = sh.worksheet(self.date_record).get_all_records()
         except gspread.exceptions.WorksheetNotFound as not_found:
             print(not_found, '- Дата занята/не найдена')
             return {}
@@ -116,14 +122,13 @@ class GoogleSheets:
 
         if len(dct) > 0:
             dct['Время'] = sorted(list(set(dct['Время'])))
-        self.date_record = date_rec
         self.dct_currant_time = dct
         return dct
 
-    def set_time(self, time_rec, id_client) -> bool:
+    def set_time(self, id_client) -> bool:
         """Производит запись на услугу - заносит в таблицу"""
         try:
-            ind_col = self.time_absolut(time_rec)
+            ind_col = self.time_absolut(self.time_record)
             all_val = sh.worksheet(self.date_record).get_all_records()
         except AttributeError as atr:
             print(atr, '- такой колонки не существует...')
@@ -138,16 +143,14 @@ class GoogleSheets:
             if self.name_master is None:
                 if i['Услуга'].strip() == self.name_service:
                     for key_time, val_use in i.items():
-                        if key_time.strip() == time_rec and val_use.strip() == '':
+                        if key_time.strip() == self.time_record and val_use.strip() == '':
                             self.name_master = i['Мастер'].strip()
-                            self.time_record = time_rec
                             sh.worksheet(self.date_record).update_cell(row_num, ind_col, f'{id_client}')
                             return True
             else:
                 if i['Услуга'].strip() == self.name_service and i['Мастер'].strip() == self.name_master:
                     for key_time, val_use in i.items():
-                        if key_time.strip() == time_rec and val_use.strip() == '':
-                            self.time_record = time_rec
+                        if key_time.strip() == self.time_record and val_use.strip() == '':
                             sh.worksheet(self.date_record).update_cell(row_num, ind_col, f'{id_client}')
                             return True
         return False
