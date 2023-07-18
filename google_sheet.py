@@ -45,12 +45,6 @@ class GoogleSheets:
     def __str__(self):
         return f'{self.client_id, self.name_service, self.name_master, self.date_record, self.time_record}'
 
-    @staticmethod
-    def time_absolut(tm):
-        """Временная функция работы с шаблоном"""
-        col = sh.worksheet('Шаблон').find(tm).col
-        return col
-
     def get_services(self) -> dict:
         """
         Названия актуальных услуг и имена мастеров
@@ -128,11 +122,7 @@ class GoogleSheets:
     def set_time(self, id_client) -> bool:
         """Производит запись на услугу - заносит в таблицу"""
         try:
-            ind_col = self.time_absolut(self.time_record)
             all_val = sh.worksheet(self.date_record).get_all_records()
-        except AttributeError as atr:
-            print(atr, '- такой колонки не существует...')
-            return False
         except gspread.exceptions.WorksheetNotFound as not_found:
             print(not_found, '- Дата занята/не найдена')
             return False
@@ -140,17 +130,20 @@ class GoogleSheets:
         row_num = 1
         for i in all_val:
             row_num += 1
+            col_num = 0
             if self.name_master is None:
                 if i['Услуга'].strip() == self.name_service:
                     for key_time, val_use in i.items():
+                        col_num += 1
                         if key_time.strip() == self.time_record and val_use.strip() == '':
                             self.name_master = i['Мастер'].strip()
-                            sh.worksheet(self.date_record).update_cell(row_num, ind_col, f'{id_client}')
+                            sh.worksheet(self.date_record).update_cell(row_num, col_num, f'{id_client}')
                             return True
             else:
                 if i['Услуга'].strip() == self.name_service and i['Мастер'].strip() == self.name_master:
                     for key_time, val_use in i.items():
+                        col_num += 1
                         if key_time.strip() == self.time_record and val_use.strip() == '':
-                            sh.worksheet(self.date_record).update_cell(row_num, ind_col, f'{id_client}')
+                            sh.worksheet(self.date_record).update_cell(row_num, col_num, f'{id_client}')
                             return True
         return False

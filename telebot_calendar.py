@@ -1,7 +1,6 @@
 import datetime
 import calendar
 import typing
-from time import sleep
 
 from telebot import TeleBot
 from telebot.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
@@ -39,7 +38,7 @@ class CallbackData:
             raise ValueError(f"Separator {sep!r} can't be used in prefix")
         if not parts:
             raise TypeError("Parts were not passed!")
-        print(prefix, parts)
+        # print(prefix, parts)
         self.prefix = prefix
         self.sep = sep
 
@@ -116,7 +115,7 @@ class CallbackData:
         :return:
         """
 
-        print(config, self._part_names)
+        # print(config, self._part_names)
         for key in config.keys():
             if key not in self._part_names:
                 return False
@@ -257,7 +256,6 @@ def calendar_query_handler(
     This method should be called inside CallbackQueryHandler.
 
 
-    :param lst_currant_date: Список доступных дат для записи в формате datetime.date
     :param bot: The object of the bot CallbackQueryHandler
     :param call: CallbackQueryHandler data
     :param day:
@@ -265,6 +263,7 @@ def calendar_query_handler(
     :param year:
     :param action:
     :param name:
+    :param lst_currant_date: Список доступных дат для записи в формате date
     :return: Returns a tuple
     """
 
