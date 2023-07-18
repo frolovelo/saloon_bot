@@ -32,7 +32,7 @@ client_phone_number = {}  # 467168798: '+79522600066'
 @bot.message_handler(commands=['start'])
 def check_phone_number(message):
     if client_phone_number.get(message.chat.id, None) is None:
-        markup = ReplyKeyboardMarkup(one_time_keyboard=True)
+        markup = ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
         button_phone = types.KeyboardButton(text="Отправить телефон 📞",
                                             request_contact=True)
         markup.add(button_phone)
@@ -44,11 +44,12 @@ def check_phone_number(message):
             if message_contact.contact is not None:
                 print(message_contact.contact)
                 client_phone_number[message.chat.id] = message_contact.contact.phone_number
+                bot.send_message(message.chat.id, text='Спасибо за доверие!', reply_markup=ReplyKeyboardRemove())
                 choice_service(message)
 
         @bot.message_handler(content_types=['text'])
         def any_word_before_number(message_any):
-            bot.send_message(message_any.chat.id, 'Нажмите кнопку, чтобы поделиться номером телефона.'
+            bot.send_message(message_any.chat.id, 'Нажмите кнопку 👇🏻, чтобы поделиться номером телефона.'
                                                   '\nБез телефона запись невозможна!')
     else:
         choice_service(message)
