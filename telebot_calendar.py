@@ -127,6 +127,7 @@ def create_calendar(lst_current_date: list[datetime.date], name: str = "calendar
                     ) -> InlineKeyboardMarkup:
     """
     Create a built-in inline keyboard with calendar
+
     :param lst_current_date: Список доступных дат для записи в формате datetime.date
     :param name: Имя календаря
     :param year: Год используемый календарём, если не используете текущий год.

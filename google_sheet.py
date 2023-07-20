@@ -32,9 +32,10 @@ def time_score(func):
 class GoogleSheets:
     def __init__(self, client_id):
         self.client_id = client_id
-        self.dct_master_service = None
+        self.dct_master_service = {}
         self.lst_currant_date = None
         self.dct_currant_time = None
+        self.lst_records = None
 
         self.name_service = None
         self.name_master = None
@@ -58,6 +59,7 @@ class GoogleSheets:
         self.dct_master_service = dct
         return dct
 
+    @time_score
     def get_all_days(self) -> list:
         """ВСЕ доступные дни для записи на определенную услугу"""
 
@@ -119,8 +121,8 @@ class GoogleSheets:
         self.dct_currant_time = dct
         return dct
 
-    def set_time(self, id_client) -> bool:
-        """Производит запись на услугу - заносит в таблицу"""
+    def set_time(self, client_record='', empty_date='') -> bool:
+        """Производит запись на услугу - заносит в таблицу <client_record>"""
         try:
             all_val = sh.worksheet(self.date_record).get_all_records()
         except gspread.exceptions.WorksheetNotFound as not_found:
@@ -135,15 +137,49 @@ class GoogleSheets:
                 if i['Услуга'].strip() == self.name_service:
                     for key_time, val_use in i.items():
                         col_num += 1
-                        if key_time.strip() == self.time_record and val_use.strip() == '':
+                        if key_time.strip() == self.time_record and val_use.strip() == empty_date:
                             self.name_master = i['Мастер'].strip()
-                            sh.worksheet(self.date_record).update_cell(row_num, col_num, f'{id_client}')
+                            sh.worksheet(self.date_record).update_cell(row_num, col_num, f'{client_record}')
                             return True
             else:
                 if i['Услуга'].strip() == self.name_service and i['Мастер'].strip() == self.name_master:
                     for key_time, val_use in i.items():
                         col_num += 1
-                        if key_time.strip() == self.time_record and val_use.strip() == '':
-                            sh.worksheet(self.date_record).update_cell(row_num, col_num, f'{id_client}')
+                        if key_time.strip() == self.time_record and val_use.strip() == empty_date:
+                            sh.worksheet(self.date_record).update_cell(row_num, col_num, f'{client_record}')
                             return True
         return False
+
+    def get_record(self, client_record: str, count_days=7) -> list:
+        """
+        Находит все записи клиента на ближайшие <count_days> дней
+
+        :param client_record: строка записи клиента.
+        :param count_days: кол-во ближайших дней для поиска.
+        :return: list(tuple) - формат: (Дата, Время, Название услуги, Имя мастера)
+        """
+        def check_record(sheet) -> None:
+            """Поиск брони клиента"""
+            if sheet.title not in self.ignor_worksheets:
+                if datetime.now() <= \
+                        datetime.strptime(sheet.title, '%d.%m.%y') <= \
+                        (datetime.now() + timedelta(days=count_days)):
+                    all_val = sheet.get_all_records()
+                    for dct in all_val:
+                        if client_record in dct.values():
+                            service = dct['Услуга']
+                            master = dct['Мастер']
+                            for k, v in dct.items():
+                                if v == client_record:
+                                    lst_records.append([sheet.title.strip(), k.strip(), service.strip(), master.strip()])
+
+        lst_records = []
+        with ThreadPoolExecutor(8) as executor:
+            executor.map(check_record, sh.worksheets())
+        return lst_records
+
+
+id_client = "id: 467168798\n@frolofelo\ntel: +79522600066"
+
+
+

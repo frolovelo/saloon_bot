@@ -7,8 +7,8 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQu
     ReplyKeyboardMarkup
 # from telebot.async_telebot import AsyncTeleBot
 # from telebot.asyncio_filters import AdvancedCustomFilter
-
 import telebot_calendar
+from keyboards import *
 
 bot = TeleBot(TOKEN)
 client_dict = {}
@@ -27,6 +27,14 @@ client_phone_number = {467168798: '+79522600066'}
 # time_order = client1.set_time('10:00')
 # print(time_order)
 # print(client1)
+def get_client_id(client_id, client_username):
+    id_client = f"id: {str(client_id)}\n@{str(client_username)}\n"
+    if client_phone_number.get(client_id, None) is not None:
+        if client_phone_number[client_id] != '':
+            id_client += 'tel: ' + client_phone_number[client_id]
+        else:
+            id_client += 'tel: None'
+    return id_client
 
 
 @bot.message_handler(commands=['start'])
@@ -47,9 +55,9 @@ def check_phone_number(message):
                 # print(message_contact.contact)
                 client_phone_number[message.chat.id] = message_contact.contact.phone_number
                 bot.send_message(message.chat.id, text='Спасибо за доверие!', reply_markup=ReplyKeyboardRemove())
-                choice_service(message)
+                menu(message)
     else:
-        choice_service(message)
+        menu(message)
 
 
 @bot.message_handler(content_types=['text'])
@@ -59,18 +67,107 @@ def any_word_before_number(message_any):
                                           'Взаимодействие с ботом происходит кнопками.')
 
 
-def choice_service(message):
-    """InlineKeyboardMarkup - Выбор услуги для записи"""
+@bot.message_handler(func=lambda message: message.text == 'MENU')
+def menu(message):
+    """Главное меню"""
     if client_dict.get(message.chat.id, None) is None:
         client = GoogleSheets(message.chat.id)
         client_dict[message.chat.id] = client
+    bot.send_message(message.chat.id, "Выберите пункт меню:", reply_markup=create_markup_menu())
+
+
+@bot.callback_query_handler(lambda call: call.data == 'CANCEL_RECORD')
+def cancel_record(call):
+    client = client_dict[call.from_user.id]
+
+    client_id = get_client_id(call.message.chat.id, call.from_user.username)
+    records = client.get_record(client_id)
+    if len(records) != 0:
+        client.lst_records = records
+        markup = InlineKeyboardMarkup(row_width=1)
+        markup.add(
+            *[InlineKeyboardButton(text=' - '.join(x[:3]), callback_data=f'CANCEL {ind}') for ind, x in enumerate(records)])
+        bot.edit_message_text(chat_id=call.message.chat.id,
+                              message_id=call.message.message_id,
+                              text='Какую запись вы хотите отменить?🙈',
+                              reply_markup=markup
+                              )
     else:
-        client = client_dict[message.chat.id]
+        bot.edit_message_text(chat_id=call.message.chat.id,
+                              message_id=call.message.message_id,
+                              text='Отменять пока нечего 🤷'
+                              )
+        check_phone_number(call.message)
+
+
+@bot.callback_query_handler(lambda call: call.data.startswith('CANCEL'))
+def approve_cancel(call):
+    markup = InlineKeyboardMarkup(row_width=2)
+    markup.add(*[InlineKeyboardButton(text='Подтверждаю', callback_data='APPROVE' + call.data),
+                 InlineKeyboardButton(text='В главное меню', callback_data='APPROVE_MENU')])
+    bot.edit_message_text(chat_id=call.message.chat.id,
+                          message_id=call.message.message_id,
+                          text='Точно отменить?',
+                          reply_markup=markup)
+
+
+@bot.callback_query_handler(lambda call: call.data.startswith('APPROVE'))
+def set_cancel(call):
+    if 'MENU' not in call.data:
+        client = client_dict[call.from_user.id]
+        print(call.data)
+        client_info = client.lst_records[int(call.data.split()[1])]
+        print(client_info)
+        client.date_record, client.time_record, client.name_service, client.name_master = client_info
+        client_id = get_client_id(call.message.chat.id, call.from_user.username)
+        if client.set_time('', client_id):
+            bot.edit_message_text(chat_id=call.message.chat.id,
+                                  message_id=call.message.message_id,
+                                  text='Запись отменена!')
+        else:
+            bot.edit_message_text(chat_id=call.message.chat.id,
+                                  message_id=call.message.message_id,
+                                  text='Не смог отменить запись.')
+    else:
+        bot.delete_message(chat_id=call.message.chat.id,
+                           message_id=call.message.message_id)
+
+    check_phone_number(call.message)
+
+
+@bot.callback_query_handler(lambda call: call.data == 'MY_RECORD')
+def show_record(call):
+    client = client_dict[call.from_user.id]
+
+    client_id = get_client_id(call.message.chat.id, call.from_user.username)
+    records = client.get_record(client_id)
+    rec = ''
+    if len(records) != 0:
+        rec += 'Ближайшие записи:\n\n'
+        for i in sorted(records, key=lambda x: (x[0], x[1], x[2])):
+            rec += '🪷' + ' - '.join(i) + '\n'
+    else:
+        rec = 'Актуальных записей не найдено 🔍'
+    bot.edit_message_text(chat_id=call.message.chat.id,
+                          message_id=call.message.message_id,
+                          text=rec
+                          )
+    check_phone_number(call.message)
+
+
+@bot.callback_query_handler(lambda call: call.data == 'RECORD')
+def choice_service(call):
+    """InlineKeyboardMarkup - Выбор услуги для записи"""
+    client = client_dict[call.from_user.id]
+
     all_serv = client.get_services()
     client.dct_master_service = all_serv
     markup = InlineKeyboardMarkup(row_width=3)
     markup.add(*[InlineKeyboardButton(text=x, callback_data=x) for x in all_serv.keys()])
-    bot.send_message(message.chat.id, "Выбери услугу:", reply_markup=markup)
+    bot.edit_message_text(chat_id=call.message.chat.id,
+                          message_id=call.message.message_id,
+                          text="Выбери услугу:",
+                          reply_markup=markup)
 
 
 @bot.callback_query_handler(func=lambda call: call.data in client_dict[call.message.chat.id].dct_master_service.keys())
@@ -80,15 +177,17 @@ def choice_master(call):
     Выбор мастера
     """
     client = client_dict[call.message.chat.id]
+
     name_ser = client.name_service = call.data
     dct = client.dct_master_service
     markup = InlineKeyboardMarkup(row_width=2)
     markup.add(*[InlineKeyboardButton(text=x, callback_data=x) for x in dct[name_ser]])
     markup.add(InlineKeyboardButton(text='Любой мастер', callback_data='any'))
 
-    bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text="Выбери Мастера:",
-                          parse_mode='Markdown')
-    bot.edit_message_reply_markup(call.message.chat.id, message_id=call.message.message_id, reply_markup=markup)
+    bot.edit_message_text(chat_id=call.message.chat.id,
+                          message_id=call.message.message_id,
+                          text="Выбери Мастера:",
+                          reply_markup=markup)
 
 
 @bot.callback_query_handler(
@@ -102,6 +201,7 @@ def choice_date(call):
     Выбор даты
     """
     client = client_dict[call.message.chat.id]
+
     if call.data != 'any':
         client.name_master = call.data
     lst = client.get_all_days()
@@ -110,11 +210,10 @@ def choice_date(call):
     calendar_dict[call.message.chat.id] = str(call.message.chat.id)
     bot.edit_message_text(chat_id=call.from_user.id,
                           message_id=call.message.message_id,
-                          text='Выбери доступную дату:\n ✅ - есть свободное время')
-    bot.edit_message_reply_markup(chat_id=call.message.chat.id,
-                                  message_id=call.message.message_id,
-                                  reply_markup=telebot_calendar.create_calendar(
-                                      name=calendar_dict[call.message.chat.id], lst_current_date=lst))
+                          text='Выбери доступную дату:\n ✅ - есть свободное время',
+                          reply_markup=telebot_calendar.create_calendar(
+                              name=calendar_dict[call.message.chat.id], lst_current_date=lst)
+                          )
 
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith(calendar_dict[call.message.chat.id]))
@@ -124,6 +223,7 @@ def choice_time(call: CallbackQuery):
     Выбор времени
     """
     client = client_dict[call.message.chat.id]
+
     lst = client.lst_currant_date
     # At this point, we are sure that this calendar is ours. So we cut the line by the separator of our calendar
     name, action, year, month, day = call.data.split(':')
@@ -152,7 +252,7 @@ def choice_time(call: CallbackQuery):
         # print(f"{calendar_dict[call.message.chat.id]}: Отмена")
         del client_dict[call.message.chat.id]
         del calendar_dict[call.message.chat.id]
-        choice_service(call.message)
+        check_phone_number(call.message)
 
 
 @bot.callback_query_handler(func=lambda call: call.data in client_dict[call.message.chat.id].dct_currant_time['Время'])
@@ -162,21 +262,19 @@ def set_time(call):
     Выбор времени
     """
     client = client_dict[call.message.chat.id]
-    client.time_record = call.data
-    id_client = f"id: {str(call.message.chat.id)}\n@{str(call.from_user.username)}\n"
-    if client_phone_number.get(call.message.chat.id, None) is not None:
-        if client_phone_number[call.message.chat.id] != '':
-            id_client += 'tel: ' + client_phone_number[call.message.chat.id]
-        else:
-            id_client += 'tel: None'
 
+    client.time_record = call.data
+    id_client = get_client_id(call.message.chat.id, call.from_user.username)
     if client.set_time(id_client):
-        bot.delete_message(call.message.chat.id, call.message.message_id)
-        bot.send_message(call.message.chat.id, f'Успешно записал вас!\n\n'
-                                               f'• Услуга: {client.name_service}\n'
-                                               f'• Мастер: {client.name_master}\n'
-                                               f'• Дата: {client.date_record}\n'
-                                               f'• Время: {client.time_record}')
+        bot.edit_message_text(chat_id=call.from_user.id,
+                              message_id=call.message.message_id,
+                              text=f'Успешно записал вас!\n\n'
+                                   f'• Услуга: {client.name_service}\n'
+                                   f'• Мастер: {client.name_master}\n'
+                                   f'• Дата: {client.date_record}\n'
+                                   f'• Время: {client.time_record}',
+                              )
+        check_phone_number(call.message)
     else:
         bot.send_message(call.message.chat.id, 'Время кто-то забронировал...\nПопробуй другое!')
 
