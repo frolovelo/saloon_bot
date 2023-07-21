@@ -44,7 +44,16 @@ class GoogleSheets:
         self.ignor_worksheets = ['Шаблон', 'Работники']
 
     def __str__(self):
-        return f'{self.client_id, self.name_service, self.name_master, self.date_record, self.time_record}'
+        return f'Инфо о клиенте:' \
+               f'{self.client_id=}\n' \
+               f'{self.dct_master_service=}\n' \
+               f'{self.lst_currant_date=}\n' \
+               f'{self.dct_currant_time=}\n' \
+               f'{self.lst_records=}\n' \
+               f'{self.name_service=}\n' \
+               f'{self.name_master=}\n' \
+               f'{self.date_record=}\n' \
+               f'{self.time_record=}'
 
     def get_services(self) -> dict:
         """
@@ -180,6 +189,17 @@ class GoogleSheets:
 
 
 id_client = "id: 467168798\n@frolofelo\ntel: +79522600066"
-
+# client = GoogleSheets(123)
+# client.name_service = 'Маникюр'
+# client.name_master = 'Крапивина Юлия'
+# c = 1
+# try:
+#     while True:
+#         print(len(client.get_all_days())) if len != 0 else 'Безопасность потока нарушена!!!'
+#         c += 1
+#         sleep(1)
+# except Exception as ex:
+#     print(ex)
+#     print(f'Цикл отработал {c} раз и сдох')
 
 
