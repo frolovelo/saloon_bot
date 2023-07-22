@@ -46,10 +46,6 @@ class GoogleSheets:
     def __str__(self):
         return f'Инфо о клиенте:' \
                f'{self.client_id=}\n' \
-               f'{self.dct_master_service=}\n' \
-               f'{self.lst_currant_date=}\n' \
-               f'{self.dct_currant_time=}\n' \
-               f'{self.lst_records=}\n' \
                f'{self.name_service=}\n' \
                f'{self.name_master=}\n' \
                f'{self.date_record=}\n' \
@@ -102,33 +98,30 @@ class GoogleSheets:
 
         return res
 
-    def get_free_time(self) -> dict:
+    def get_free_time(self) -> list:
         """Функция выгружает ВСЕ СВОБОДНОЕ ВРЕМЯ для определенной ДАТЫ"""
-        dct = {}
+        lst = []
         try:
             all_val = sh.worksheet(self.date_record).get_all_records()
         except gspread.exceptions.WorksheetNotFound as not_found:
             print(not_found, '- Дата занята/не найдена')
-            return {}
+            return []
 
         for i in all_val:
             if self.name_master is None:
                 if i['Услуга'].strip() == self.name_service:
                     for k, v in i.items():
                         if str(v).strip() == '':
-                            dct['Время'] = dct.get('Время', [])
-                            dct['Время'].append(k.strip())
+                            lst.append(k.strip())
             else:
                 if i['Услуга'].strip() == self.name_service and i['Мастер'].strip() == self.name_master:
                     for k, v in i.items():
                         if str(v).strip() == '':
-                            dct['Время'] = dct.get('Время', [])
-                            dct['Время'].append(k.strip())
+                            lst.append(k.strip())
 
-        if len(dct) > 0:
-            dct['Время'] = sorted(list(set(dct['Время'])))
-        self.dct_currant_time = dct
-        return dct
+        if len(lst) > 0:
+            lst = sorted(list(set(lst)))
+        return lst
 
     def set_time(self, client_record='', empty_date='') -> bool:
         """Производит запись на услугу - заносит в таблицу <client_record>"""
