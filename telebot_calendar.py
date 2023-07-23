@@ -199,7 +199,7 @@ def create_calendar(lst_current_date: list[datetime.date], name: str = "calendar
             "<", callback_data=calendar_callback.new("PREVIOUS-MONTH", year, month, "!")
         ),
         InlineKeyboardButton(
-            "Отмена", callback_data=calendar_callback.new("CANCEL", year, month, "!")
+            "Отмена", callback_data=calendar_callback.new("MENU", year, month, "!")
         ),
         InlineKeyboardButton(
             ">", callback_data=calendar_callback.new("NEXT-MONTH", year, month, "!")
@@ -319,11 +319,11 @@ def calendar_query_handler(
                 lst_current_date=lst_currant_date),
         )
         return None
-    elif action == "CANCEL":
+    elif action == "MENU":
         # bot.delete_message(
         #     chat_id=call.message.chat.id, message_id=call.message.message_id
         # )
-        return "CANCEL", None
+        return "MENU", None
     else:
         bot.answer_callback_query(callback_query_id=call.id, text="ERROR!")
         # bot.delete_message(
