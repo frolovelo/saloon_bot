@@ -9,3 +9,7 @@ def create_markup_menu():
     markup.add(InlineKeyboardButton(text=menu_buttons[2], callback_data='MY_RECORD'))
 
     return markup
+
+
+def button_to_menu(text='Отмена'):
+    return InlineKeyboardButton(text=text, callback_data='MENU')
