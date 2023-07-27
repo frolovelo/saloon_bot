@@ -1,5 +1,5 @@
 from config import TOKEN
-from google_sheet import GoogleSheets
+from google_sheet import GoogleSheets, get_cache_services
 from telebot import types, TeleBot
 from telebot.types import CallbackQuery, ReplyKeyboardRemove, \
     ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
@@ -29,6 +29,8 @@ def get_client_id(client_id, client_username) -> str:
 
 def create_client(chat_id) -> GoogleSheets:
     """Создаёт объект GoogleSheet по chat_id"""
+    if client_dict.get(chat_id):
+        return client_dict[chat_id]
     client = GoogleSheets(chat_id)
     client_dict[chat_id] = client
     timer_dict[chat_id] = datetime.now()
@@ -38,7 +40,6 @@ def create_client(chat_id) -> GoogleSheets:
 @bot.message_handler(commands=['start'])
 def check_phone_number(message):
     """Запрашивает номер телефона у пользователя единожды"""
-    clear_all_dict(message.chat.id)
 
     if client_phone_number.get(message.chat.id, None) is None:
         markup = ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
@@ -68,6 +69,7 @@ def any_word_before_number(message_any):
 
 def menu(message):
     """Главное меню"""
+    clear_unused_info(message.chat.id)
     bot.send_message(message.chat.id, "Выберите пункт меню:", reply_markup=create_markup_menu())
 
 
@@ -165,10 +167,9 @@ def choice_service(call):
     InlineKeyboardMarkup
     Выбор услуги для записи
     """
-    client = create_client(call.message.chat.id)
+    create_client(call.message.chat.id)
 
-    all_serv = client.get_services()
-    client.dct_master_service = all_serv
+    all_serv = get_cache_services()
     markup = InlineKeyboardMarkup(row_width=3)
     markup.add(*[InlineKeyboardButton(text=x, callback_data='SERVICE' + x) for x in all_serv.keys()])
     markup.add(button_to_menu())
@@ -187,7 +188,7 @@ def choice_master(call):
     client = client_dict.get(call.from_user.id)
     if client:
         name_ser = client.name_service = call.data.lstrip('SERVICE')
-        dct = client.dct_master_service
+        dct = get_cache_services()
         markup = InlineKeyboardMarkup(row_width=2)
         markup.add(*[InlineKeyboardButton(text=x, callback_data='MASTER' + x) for x in dct[name_ser]])
         markup.add(InlineKeyboardButton(text='Любой мастер', callback_data='MASTER' + 'ЛЮБОЙ'), button_to_menu())
