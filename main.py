@@ -82,7 +82,6 @@ def cancel_record(call):
     client_id = get_client_id(call.message.chat.id, call.from_user.username)
     records = client.get_record(client_id)
     if len(records) != 0:
-        client.lst_records = records
         markup = InlineKeyboardMarkup(row_width=1)
         markup.add(
             *[InlineKeyboardButton(text=' - '.join(x[:3]), callback_data=f'CANCEL {ind}') for ind, x in
