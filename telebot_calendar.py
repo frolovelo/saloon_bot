@@ -164,17 +164,6 @@ def create_calendar(lst_current_date: list[datetime.date], name: str = "calendar
             if day == 0:
                 row.append(InlineKeyboardButton(
                     " ", callback_data=data_ignore))
-            elif (
-                    f"{now_day.day}.{now_day.month}.{now_day.year}"
-                    == f"{day}.{month}.{year}"
-            ):
-                row.append(
-                    InlineKeyboardButton(
-                        f"({day})",
-                        callback_data=calendar_callback.new(
-                            "DAY", year, month, day),
-                    )
-                )
             else:
                 if datetime.date(year, month, day) in lst_current_date:
                     row.append(
