@@ -28,7 +28,11 @@ def get_client_id(client_id, client_username) -> str:
 
 
 def create_client(chat_id) -> GoogleSheets:
-    """Создаёт объект GoogleSheet по chat_id"""
+    """
+    Создаёт объект GoogleSheet по chat_id
+
+    :chat_id: id чата/клиента
+    """
     if client_dict.get(chat_id):
         return client_dict[chat_id]
     client = GoogleSheets(chat_id)
@@ -118,8 +122,8 @@ def approve_cancel(call):
 @bot.callback_query_handler(lambda call: call.data.startswith('APPROVE'))
 def set_cancel(call):
     """
-        Обработка inline callback запросов
-        Отмена записи
+    Обработка inline callback запросов
+    Отмена записи
     """
     client = client_dict.get(call.from_user.id)
     if client:
@@ -290,7 +294,7 @@ def set_time(call):
 
 @bot.callback_query_handler(func=lambda call: call.data == 'MENU')
 def go_to_menu(call):
-    """Главное меню"""
+    """Возращает в главное меню"""
     bot.delete_message(chat_id=call.message.chat.id,
                        message_id=call.message.message_id)
     check_phone_number(call.message)
