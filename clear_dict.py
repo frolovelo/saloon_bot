@@ -24,12 +24,11 @@ def clear_unused_info(chat_id):
         client.lst_currant_date = None
         client.dct_currant_time = None
         # client.lst_records = None
-
         client.name_service = None
         client.name_master = None
         client.date_record = None
         client.time_record = None
-        # print(client_dict[chat_id])
+
     if calendar_dict.get(chat_id):
         del calendar_dict[chat_id]
 
@@ -40,21 +39,12 @@ def clear_all_dict(chat_id):
 
     :param chat_id: id пользователя
     """
-
-    # print(client_dict)
-    # print(calendar_dict)
-    # print(timer_dict)
-
     if client_dict.get(chat_id):
         del client_dict[chat_id]
     if calendar_dict.get(chat_id):
         del calendar_dict[chat_id]
     if timer_dict.get(chat_id):
         del timer_dict[chat_id]
-
-    # print(client_dict)
-    # print(calendar_dict)
-    # print(timer_dict)
 
 
 def clear_client_dict(period_clear_minutes=60):
