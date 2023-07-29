@@ -10,15 +10,13 @@ from retrying import retry
 import json
 
 # https://www.youtube.com/watch?v=82DGz7IxW7c -настройка подключения
-# gspread.exceptions.APIError: {'code': 500, 'message': 'Internal error encountered.', 'status': 'INTERNAL'}
-# requests.exceptions.ReadTimeout: HTTPSConnectionPool(host='api.telegram.org', port=443): Read timed out. (read timeout=25)
 
 myscope = ["https://www.googleapis.com/auth/spreadsheets",
            "https://www.googleapis.com/auth/drive"]
 
 # Здесь нужно сменить данные на свои
 # Название файла json ключа
-creds = ServiceAccountCredentials.from_json_keyfile_name('beautysaloon-392108-e0e38d544ad6.json', myscope)
+creds = ServiceAccountCredentials.from_json_keyfile_name('beautysaloon.json', myscope)
 client_main = gspread.authorize(creds)
 # Название таблицы
 sh = client_main.open('SaloonSheet')
@@ -49,17 +47,29 @@ def deserialize_dict(json_str):
     return json.loads(json_str)
 
 
-def get_cache_days(service_name, master_name):
-    """Запрашивает данные из кэша cashe_days"""
+def get_cache_days(service_name: str, master_name: str) -> list or None:
+    """
+    Запрашивает свободные даты из кэша cashe_days
+
+    :param service_name: Название услуги
+    :param master_name: Имя мастера
+    """
     if service_name in cache_days:
         cached_value = cache_days[service_name]
         cached_dict = deserialize_dict(cached_value)
         if master_name in cached_dict:
             return cached_dict[master_name]
+    return None
 
 
-def update_cache_days(service_name, master_name, available_dates):
-    """Обновляет кэш cache_days"""
+def update_cache_days(service_name, master_name, available_dates) -> None:
+    """
+    Обновляет свободные даты для кэша cache_days
+
+    :param service_name: Название услуги
+    :param master_name: Имя мастера
+    :param available_dates: Доступные даты
+    """
     if master_name is None:
         master_name = 'null'
 
@@ -74,8 +84,12 @@ def update_cache_days(service_name, master_name, available_dates):
         cache_value = serialize_dict({master_name: available_dates})
         cache_days[service_name] = cache_value
 
+
 @retry(wait_exponential_multiplier=3000, wait_exponential_max=3000)
-def get_sheet_names():
+def get_sheet_names() -> list:
+    """
+    Запрашивает все имена листов таблицы
+    """
     # Проверяем, есть ли результат в кэше
     if 'worksheets' in cache_worksheets:
         return cache_worksheets['worksheets']
@@ -87,7 +101,10 @@ def get_sheet_names():
 
 
 @retry(wait_exponential_multiplier=3000, wait_exponential_max=3000)
-def get_cache_services():
+def get_cache_services() -> dict:
+    """
+    Запрашивает все услуги
+    """
     if 'services' in cache_worksheets:
         return cache_worksheets['services']
     dct = {}
@@ -134,7 +151,7 @@ class GoogleSheets:
 
     @retry(wait_exponential_multiplier=3000, wait_exponential_max=9000)
     def get_all_days(self) -> list:
-        """ВСЕ доступные дни для записи на определенную услугу"""
+        """Все доступные дни для записи на определенную услугу"""
 
         check = get_cache_days(self.name_service, self.name_master)
         if check:
@@ -143,12 +160,15 @@ class GoogleSheets:
         @retry(wait_exponential_multiplier=3000, wait_exponential_max=3000)
         def actual_date(sheet_name, count_days=7) -> bool:
             """
-            Проверяет по названию листа актуальные даты для записи на ближайшие 7 дней,
+            Проверяет по названию листа актуальные даты для записи на ближайшие count_days дней,
             а также наличие свободного времени
+
+            :param sheet_name: Имя листа
+            :param count_days: Кол-во ближайщих дней для поиска
             """
             if sheet_name.title not in ignor_worksheets:
                 if datetime.now().date() <= \
-                        datetime.strptime(sheet_name.title, '%d.%m.%y').date() <= \
+                        datetime.strptime(sheet_name.title.strip(), '%d.%m.%y').date() <= \
                         (datetime.now().date() + timedelta(days=count_days)):
                     val = sheet_name.get_all_records()
                     for dct in val:
@@ -157,11 +177,11 @@ class GoogleSheets:
                                 if dct[name_col_service].strip() == self.name_service:
                                     for k, v in dct.items():
                                         if str(v).strip() == '':
-                                            return sheet_name.title.strip()
+                                            return sheet_name.title
                         elif dct[name_col_service].strip() == self.name_service:
                             for k, v in dct.items():
                                 if str(v).strip() == '':
-                                    return sheet_name.title.strip()
+                                    return sheet_name.title
             return False
 
         worksheet_all = get_sheet_names()
@@ -184,17 +204,11 @@ class GoogleSheets:
             print(not_found, '- Дата занята/не найдена')
             return []
 
-        for i in all_val:
-            if self.name_master is None:
-                if i[name_col_service].strip() == self.name_service:
-                    for k, v in i.items():
-                        if str(v).strip() == '':
-                            lst.append(k.strip())
-            else:
-                if i[name_col_service].strip() == self.name_service and i[name_col_master].strip() == self.name_master:
-                    for k, v in i.items():
-                        if str(v).strip() == '':
-                            lst.append(k.strip())
+        lst = [k.strip() for i in all_val
+               if (self.name_master is None and i[name_col_service].strip() == self.name_service) or
+               (self.name_master is not None and i[name_col_service].strip() == self.name_service and
+                i[name_col_master].strip() == self.name_master)
+               for k, v in i.items() if str(v).strip() == '']
 
         if len(lst) > 0:
             lst = sorted(list(set(lst)))
@@ -202,7 +216,12 @@ class GoogleSheets:
 
     @retry(wait_exponential_multiplier=3000, wait_exponential_max=3000)
     def set_time(self, client_record='', empty_date='') -> bool:
-        """Производит запись на услугу - заносит в таблицу <client_record>"""
+        """
+        Производит в таблицу запись/отмену клиента
+
+        :param client_record: Строка записи клиента в таблицу
+        :param empty_date: Строка для заполнения пустая или с определенными данными
+        """
         try:
             all_val = sh.worksheet(self.date_record).get_all_records()
         except gspread.exceptions.WorksheetNotFound as not_found:
@@ -213,33 +232,22 @@ class GoogleSheets:
         for i in all_val:
             row_num += 1
             col_num = 0
-            if self.name_master is None:
-                if i[name_col_service].strip() == self.name_service:
-                    for key_time, val_use in i.items():
-                        col_num += 1
-                        if key_time.strip() == self.time_record and val_use.strip() == empty_date:
+            if (self.name_master is None and i[name_col_service].strip() == self.name_service) or \
+                    (self.name_master is not None and i[name_col_service].strip() == self.name_service and
+                     i[name_col_master].strip() == self.name_master):
+                for key_time, val_use in i.items():
+                    col_num += 1
+                    if key_time.strip() == self.time_record and val_use.strip() == empty_date:
+                        if self.name_master is None:
                             self.name_master = i[name_col_master].strip()
-                            sh.worksheet(self.date_record).update_cell(row_num, col_num, f'{client_record}')
-                            if self.lst_records and empty_date == '':
-                                self.lst_records.append(
-                                    [self.date_record, self.time_record, self.name_service, self.name_master])
-                            elif self.lst_records and client_record == '':
-                                self.lst_records.remove(
-                                    [self.date_record, self.time_record, self.name_service, self.name_master])
-                            return True
-            else:
-                if i[name_col_service].strip() == self.name_service and i[name_col_master].strip() == self.name_master:
-                    for key_time, val_use in i.items():
-                        col_num += 1
-                        if key_time.strip() == self.time_record and val_use.strip() == empty_date:
-                            sh.worksheet(self.date_record).update_cell(row_num, col_num, f'{client_record}')
-                            if self.lst_records and empty_date == '':
-                                self.lst_records.append(
-                                    [self.date_record, self.time_record, self.name_service, self.name_master])
-                            elif self.lst_records and client_record == '':
-                                self.lst_records.remove(
-                                    [self.date_record, self.time_record, self.name_service, self.name_master])
-                            return True
+                        sh.worksheet(self.date_record).update_cell(row_num, col_num, f'{client_record}')
+                        if (self.lst_records and empty_date == '') or (self.lst_records and client_record == ''):
+                            record = [self.date_record, self.time_record, self.name_service, self.name_master]
+                            if empty_date == '':
+                                self.lst_records.append(record)
+                            else:
+                                self.lst_records.remove(record)
+                        return True
         return False
 
     @retry(wait_exponential_multiplier=3000, wait_exponential_max=3000)
@@ -259,36 +267,19 @@ class GoogleSheets:
         def check_record(sheet) -> None:
             """Поиск брони клиента"""
             if sheet.title not in ignor_worksheets:
-                if datetime.now() <= \
-                        datetime.strptime(sheet.title, '%d.%m.%y') <= \
+                if datetime.now() <= datetime.strptime(sheet.title, '%d.%m.%y') <= \
                         (datetime.now() + timedelta(days=count_days)):
                     all_val = sheet.get_all_records()
-                    for dct in all_val:
-                        if client_record in dct.values():
-                            service = dct[name_col_service]
-                            master = dct[name_col_master]
-                            for k, v in dct.items():
-                                if v == client_record:
-                                    lst_records.append(
-                                        [sheet.title.strip(), k.strip(), service.strip(), master.strip()])
+                    lst_records.extend(
+                        [sheet.title.strip(), k.strip(), dct[name_col_service].strip(), dct[name_col_master].strip()]
+                        for dct in all_val
+                        for k, v in dct.items()
+                        if v == client_record
+                    )
 
         lst_records = []
         with ThreadPoolExecutor(2) as executor:
             executor.map(check_record, sh.worksheets())
         self.lst_records = lst_records
+        print(lst_records)
         return lst_records
-
-
-id_client = "id: 467168798\n@frolofelo\ntel: +79522600066"
-# client = GoogleSheets(123)
-# client.name_service = 'Маникюр'
-# client.name_master = 'Крапивина Юлия'
-# c = 1
-# try:
-#     while True:
-#         print(len(client.get_all_days())) if len != 0 else 'Безопасность потока нарушена!!!'
-#         c += 1
-#         sleep(1)
-# except Exception as ex:
-#     print(ex)
-#     print(f'Цикл отработал {c} раз и умер')
