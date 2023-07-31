@@ -11,5 +11,9 @@ def create_markup_menu():
     return markup
 
 
-def button_to_menu(text='Отмена'):
-    return InlineKeyboardButton(text=text, callback_data='MENU')
+def button_to_menu(call_data_return, text_return='Назад', text_cancel='Вернуться в меню'):
+    if call_data_return:
+        return [InlineKeyboardButton(text=text_return, callback_data=call_data_return),
+                InlineKeyboardButton(text=text_cancel, callback_data='MENU')]
+    else:
+        return [InlineKeyboardButton(text=text_cancel, callback_data='MENU')]
