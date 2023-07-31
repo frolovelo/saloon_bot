@@ -188,6 +188,9 @@ def create_calendar(lst_current_date: list[datetime.date], name: str = "calendar
             "<", callback_data=calendar_callback.new("PREVIOUS-MONTH", year, month, "!")
         ),
         InlineKeyboardButton(
+            "Назад", callback_data=calendar_callback.new("RETURN", year, month, "!")
+        ),
+        InlineKeyboardButton(
             "Отмена", callback_data=calendar_callback.new("MENU", year, month, "!")
         ),
         InlineKeyboardButton(
@@ -313,6 +316,8 @@ def calendar_query_handler(
         #     chat_id=call.message.chat.id, message_id=call.message.message_id
         # )
         return "MENU", None
+    elif action == "RETURN":
+        return "RETURN", None
     else:
         bot.answer_callback_query(callback_query_id=call.id, text="ERROR!")
         # bot.delete_message(
