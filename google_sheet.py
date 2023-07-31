@@ -1,7 +1,6 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
+from threading import Lock
 from time import time
-
-# from config import *
 from oauth2client.service_account import ServiceAccountCredentials
 import gspread
 from concurrent.futures import ThreadPoolExecutor
@@ -33,6 +32,8 @@ name_col_master = 'Мастер'
 cache_worksheets = TTLCache(maxsize=2, ttl=12 * 60 * 60)
 # Создаем кэш с TTL (временем жизни) в 15 минут
 cache_days = TTLCache(maxsize=6, ttl=15 * 60)
+# Lock для синхронизации доступа к словарям
+lock = Lock()
 
 
 # Функция для сериализации словаря в JSON-строку
@@ -93,7 +94,8 @@ def get_sheet_names() -> list:
     # Проверяем, есть ли результат в кэше
     if 'worksheets' in cache_worksheets:
         return cache_worksheets['worksheets']
-    worksheets = sh.worksheets()
+    with lock:
+        worksheets = sh.worksheets()
 
     # Кэшируем результат
     cache_worksheets['worksheets'] = worksheets
@@ -108,7 +110,8 @@ def get_cache_services() -> dict:
     if 'services' in cache_worksheets:
         return cache_worksheets['services']
     dct = {}
-    ws = sh.worksheet(name_sheet_workers)
+    with lock:
+        ws = sh.worksheet(name_sheet_workers)
     for i in ws.get_all_records():
         dct[i[name_col_service].strip()] = dct.get(i[name_col_service].strip(), [])
         dct[i[name_col_service].strip()].append(i[name_col_master].strip())
@@ -161,27 +164,38 @@ class GoogleSheets:
         def actual_date(sheet_name, count_days=7) -> bool:
             """
             Проверяет по названию листа актуальные даты для записи на ближайшие count_days дней,
-            а также наличие свободного времени
+            а также наличие свободного времени.
 
-            :param sheet_name: Имя листа
-            :param count_days: Кол-во ближайщих дней для поиска
+            :param sheet_name: имя листа
+            :param count_days: кол-во ближайших дней для поиска
             """
-            if sheet_name.title not in ignor_worksheets:
-                if datetime.now().date() <= \
-                        datetime.strptime(sheet_name.title.strip(), '%d.%m.%y').date() <= \
-                        (datetime.now().date() + timedelta(days=count_days)):
-                    val = sheet_name.get_all_records()
-                    for dct in val:
-                        if self.name_master is not None:
-                            if dct[name_col_master].strip() == self.name_master:
-                                if dct[name_col_service].strip() == self.name_service:
-                                    for k, v in dct.items():
-                                        if str(v).strip() == '':
-                                            return sheet_name.title
-                        elif dct[name_col_service].strip() == self.name_service:
-                            for k, v in dct.items():
-                                if str(v).strip() == '':
-                                    return sheet_name.title
+            if sheet_name.title in ignor_worksheets:
+                return False
+            date_sheet = datetime.strptime(sheet_name.title.strip(), '%d.%m.%y').date()
+            date_today = datetime.now()
+            if not (date_today.date() <= date_sheet <= (datetime.now().date() + timedelta(days=count_days))):
+                return False
+            with lock:
+                val = sheet_name.get_all_records()
+            for dct in val:
+
+                if date_today.date() == date_sheet:
+                    if (self.name_master is not None and
+                        dct[name_col_master].strip() == self.name_master and
+                        dct[name_col_service].strip() == self.name_service) or \
+                            (self.name_master is None and
+                             dct[name_col_service].strip() == self.name_service):
+                        for k, v in dct.items():
+                            if str(v).strip() == '' and date_today.time() < datetime.strptime(k, '%H:%M').time():
+                                return sheet_name.title
+                    continue
+
+                if (self.name_master is not None and dct[name_col_master].strip() == self.name_master and
+                    dct[name_col_service].strip() == self.name_service) \
+                        or (self.name_master is None and dct[name_col_service].strip() == self.name_service):
+                    for k, v in dct.items():
+                        if str(v).strip() == '':
+                            return sheet_name.title
             return False
 
         worksheet_all = get_sheet_names()
@@ -197,18 +211,27 @@ class GoogleSheets:
     @retry(wait_exponential_multiplier=3000, wait_exponential_max=3000)
     def get_free_time(self) -> list:
         """Функция выгружает ВСЕ СВОБОДНОЕ ВРЕМЯ для определенной ДАТЫ"""
-        lst = []
+
         try:
-            all_val = sh.worksheet(self.date_record).get_all_records()
+            with lock:
+                all_val = sh.worksheet(self.date_record).get_all_records()
         except gspread.exceptions.WorksheetNotFound as not_found:
             print(not_found, '- Дата занята/не найдена')
             return []
 
-        lst = [k.strip() for i in all_val
-               if (self.name_master is None and i[name_col_service].strip() == self.name_service) or
-               (self.name_master is not None and i[name_col_service].strip() == self.name_service and
-                i[name_col_master].strip() == self.name_master)
-               for k, v in i.items() if str(v).strip() == '']
+        if self.date_record == datetime.now().strftime('%d.%m.%y'):
+            lst = [k.strip() for i in all_val
+                   if (self.name_master is None and i[name_col_service].strip() == self.name_service) or
+                   (self.name_master is not None and i[name_col_service].strip() == self.name_service and
+                    i[name_col_master].strip() == self.name_master)
+                   for k, v in i.items() if str(v).strip() == '' and
+                   datetime.now().time() < datetime.strptime(k, '%H:%M').time()]
+        else:
+            lst = [k.strip() for i in all_val
+                   if (self.name_master is None and i[name_col_service].strip() == self.name_service) or
+                   (self.name_master is not None and i[name_col_service].strip() == self.name_service and
+                    i[name_col_master].strip() == self.name_master)
+                   for k, v in i.items() if str(v).strip() == '']
 
         if len(lst) > 0:
             lst = sorted(list(set(lst)))
@@ -223,7 +246,8 @@ class GoogleSheets:
         :param empty_date: Строка для заполнения пустая или с определенными данными
         """
         try:
-            all_val = sh.worksheet(self.date_record).get_all_records()
+            with lock:
+                all_val = sh.worksheet(self.date_record).get_all_records()
         except gspread.exceptions.WorksheetNotFound as not_found:
             print(not_found, '- Дата занята/не найдена')
             return False
@@ -259,27 +283,47 @@ class GoogleSheets:
         :param count_days: кол-во ближайших дней для поиска.
         :return: list(list) - формата: [Дата, Время, Название услуги, Имя мастера]
         """
-
         if self.lst_records:
             return self.lst_records
 
         @retry(wait_exponential_multiplier=3000, wait_exponential_max=3000)
         def check_record(sheet) -> None:
             """Поиск брони клиента"""
-            if sheet.title not in ignor_worksheets:
-                if datetime.now() <= datetime.strptime(sheet.title, '%d.%m.%y') <= \
-                        (datetime.now() + timedelta(days=count_days)):
+            if sheet.title in ignor_worksheets:
+                return None
+            date_sheet = datetime.strptime(sheet.title, '%d.%m.%y')
+            date_today = datetime.now()
+            if date_today.date() == date_sheet:
+                with lock:
                     all_val = sheet.get_all_records()
-                    lst_records.extend(
-                        [sheet.title.strip(), k.strip(), dct[name_col_service].strip(), dct[name_col_master].strip()]
-                        for dct in all_val
-                        for k, v in dct.items()
-                        if v == client_record
-                    )
+                lst_records.extend(
+                    [sheet.title.strip(), k.strip(), dct[name_col_service].strip(), dct[name_col_master].strip()]
+                    for dct in all_val
+                    for k, v in dct.items()
+                    if v == client_record and k == date_today.time() < datetime.strptime(k, '%H:%M').time()
+                )
+
+            elif date_today.date() < date_sheet.date() <= (date_today + timedelta(days=count_days)).date():
+                with lock:
+                    all_val = sheet.get_all_records()
+                lst_records.extend(
+                    [sheet.title.strip(), k.strip(), dct[name_col_service].strip(), dct[name_col_master].strip()]
+                    for dct in all_val
+                    for k, v in dct.items()
+                    if v == client_record
+                )
 
         lst_records = []
         with ThreadPoolExecutor(2) as executor:
             executor.map(check_record, sh.worksheets())
         self.lst_records = lst_records
-        print(lst_records)
         return lst_records
+
+
+# print('GO!')
+# a = GoogleSheets(123)
+# # a.name_service = 'Маникюр'
+# # a.name_master = 'Крапивина Юлия'
+# # a.date_record = '29.07.23'
+# # a.name_master = 'Королёва Любовь'
+# print(a.get_free_time())
