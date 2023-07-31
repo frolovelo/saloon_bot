@@ -307,7 +307,7 @@ def approve_record(call):
                               message_id=call.message.message_id,
                               text=f'Проверьте данные записи:\n\n'
                                    f'🛎️ Услуга: {client.name_service}\n'
-                                   f'👤 Мастер: {client.name_master}\n'
+                                   f'👤 Мастер: {client.name_master if client.name_master else "Любой"}\n'
                                    f'📅 Дата: {client.date_record}\n'
                                    f'🕓 Время: {client.time_record}',
                               reply_markup=markup)
@@ -329,7 +329,7 @@ def set_time(call):
                                   message_id=call.message.message_id,
                                   text=f'Успешно записал вас!\n\n'
                                        f'🛎️ Услуга: {client.name_service}\n'
-                                       f'👤 Мастер: {client.name_master}\n'
+                                       f'👤 Мастер: {client.name_master if client.name_master else "Любой"}\n'
                                        f'📅 Дата: {client.date_record}\n'
                                        f'🕓 Время: {client.time_record}',
                                   )
