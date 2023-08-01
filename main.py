@@ -90,7 +90,7 @@ def cancel_record(call):
         markup.add(
             *[InlineKeyboardButton(text=' - '.join(x[:3]), callback_data=f'CANCEL {ind}') for ind, x in
               enumerate(records)])
-        markup.add(*button_to_menu(call_data_return=None, text_cancel='В главное меню'))
+        markup.add(*button_to_menu(return_callback=None, menu_text='В главное меню'))
         bot.edit_message_text(chat_id=call.message.chat.id,
                               message_id=call.message.message_id,
                               text='Какую запись вы хотите отменить?🙈',
@@ -175,7 +175,7 @@ def choice_service(call):
     all_serv = get_cache_services()
     markup = InlineKeyboardMarkup(row_width=3)
     markup.add(*[InlineKeyboardButton(text=x, callback_data='SERVICE' + x) for x in all_serv.keys()])
-    markup.add(*button_to_menu('MENU'))
+    markup.add(*button_to_menu(None))
     bot.edit_message_text(chat_id=call.message.chat.id,
                           message_id=call.message.message_id,
                           text="Выбери услугу:",

@@ -2,6 +2,11 @@ from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
 def create_markup_menu():
+    """
+    Создаёт клавиатуру главного меню
+
+    :return: InlineKeyboardMarkup
+    """
     menu_buttons = ['Запись✅', 'Отмена записи❌', 'Мои записи📝']
     markup = InlineKeyboardMarkup(row_width=2)
     markup.add(InlineKeyboardButton(text=menu_buttons[0], callback_data='RECORD'))
@@ -11,9 +16,20 @@ def create_markup_menu():
     return markup
 
 
-def button_to_menu(call_data_return, text_return='Назад', text_cancel='Вернуться в меню'):
-    if call_data_return:
-        return [InlineKeyboardButton(text=text_return, callback_data=call_data_return),
-                InlineKeyboardButton(text=text_cancel, callback_data='MENU')]
+def button_to_menu(return_callback: str | None, return_text='Назад', menu_text='Вернуться в меню') \
+        -> list[InlineKeyboardButton]:
+    """
+    Создает кнопки "Назад" и "В главное меню".
+
+    :param return_callback: Callback-данные для кнопки "Назад".
+                            Если значение - None, то кнопка не будет создана.
+    :param return_text: Текст на кнопке "Назад" (по умолчанию - "Назад")
+    :param menu_text: Текст на кнопке "В главное меню" (по умолчанию - "Вернуться в меню")
+
+    :return: Список объектов InlineKeyboardButton
+    """
+    if return_callback:
+        return [InlineKeyboardButton(text=return_text, callback_data=return_callback),
+                InlineKeyboardButton(text=menu_text, callback_data='MENU')]
     else:
-        return [InlineKeyboardButton(text=text_cancel, callback_data='MENU')]
+        return [InlineKeyboardButton(text=menu_text, callback_data='MENU')]

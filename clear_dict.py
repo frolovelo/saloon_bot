@@ -12,7 +12,7 @@ timer_dict = {}
 lock = Lock()
 
 
-def clear_unused_info(chat_id):
+def clear_unused_info(chat_id) -> None:
     """
         Отчищает данные из GoogleSheet,
         не затрагивает кэшированные данные
@@ -33,7 +33,7 @@ def clear_unused_info(chat_id):
         del calendar_dict[chat_id]
 
 
-def clear_all_dict(chat_id):
+def clear_all_dict(chat_id) -> None:
     """
     Отчищает все словари по chat_id
 
@@ -47,14 +47,13 @@ def clear_all_dict(chat_id):
         del timer_dict[chat_id]
 
 
-def clear_client_dict(period_clear_minutes=60):
+def clear_client_dict(period_clear_minutes=60) -> None:
     """
-    Отчищает все неактивные элементы словаря
+    Отчищает все неактивные элементы словарей
 
     :param period_clear_minutes: периодичность отчистки в минутах
     """
     while True:
-        print('ОТЧИСТКА')
         sleep(period_clear_minutes * 60)
         at_now = datetime.now()
         lst_to_del = []
