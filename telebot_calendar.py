@@ -191,7 +191,7 @@ def create_calendar(lst_current_date: list[datetime.date], name: str = "calendar
             "Назад", callback_data=calendar_callback.new("RETURN", year, month, "!")
         ),
         InlineKeyboardButton(
-            "Отмена", callback_data=calendar_callback.new("MENU", year, month, "!")
+            "Меню", callback_data=calendar_callback.new("MENU", year, month, "!")
         ),
         InlineKeyboardButton(
             ">", callback_data=calendar_callback.new("NEXT-MONTH", year, month, "!")
