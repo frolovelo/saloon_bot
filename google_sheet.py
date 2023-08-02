@@ -178,7 +178,12 @@ class GoogleSheets:
             """
             if sheet_obj.title in IGNOR_WORKSHEETS:
                 return False
-            date_sheet = datetime.strptime(sheet_obj.title.strip(), '%d.%m.%y').date()
+            try:
+                date_sheet = datetime.strptime(sheet_obj.title.strip(), '%d.%m.%y').date()
+            except Exception as ex:
+                print(ex)
+                print(sheet_obj.title, '- Добавьте лист в IGNOR_WORKSHEETS')
+                return False
             date_today = datetime.now()
             if not date_today.date() <= date_sheet <= (datetime.now().date() + timedelta(days=count_days)):
                 return False
@@ -223,7 +228,7 @@ class GoogleSheets:
             with lock:
                 all_val = sh.worksheet(self.date_record).get_all_records()
         except gspread.exceptions.WorksheetNotFound as not_found:
-            print(not_found, '- Дата занята/не найдена')
+            print(not_found, self.date_record, '- Дата занята/не найдена')
             return []
 
         if self.date_record == datetime.now().strftime('%d.%m.%y'):
@@ -258,7 +263,7 @@ class GoogleSheets:
             with lock:
                 all_val = sh.worksheet(self.date_record).get_all_records()
         except gspread.exceptions.WorksheetNotFound as not_found:
-            print(not_found, '- Дата занята/не найдена')
+            print(not_found, self.date_record, '- Дата занята/не найдена')
             return False
 
         row_num = 1
@@ -297,17 +302,22 @@ class GoogleSheets:
             return self.lst_records
 
         @retry(wait_exponential_multiplier=3000, wait_exponential_max=3000)
-        def check_record(sheet) -> None:
+        def check_record(sheet_obj) -> None:
             """Поиск брони клиента"""
-            if sheet.title in IGNOR_WORKSHEETS:
+            if sheet_obj.title in IGNOR_WORKSHEETS:
                 return None
-            date_sheet = datetime.strptime(sheet.title, '%d.%m.%y')
+            try:
+                date_sheet = datetime.strptime(sheet_obj.title, '%d.%m.%y')
+            except Exception as ex:
+                print(ex)
+                print(sheet_obj.title, '- Добавьте лист в IGNOR_WORKSHEETS')
+                return None
             date_today = datetime.now()
             if date_today.date() == date_sheet:
                 with lock:
-                    all_val = sheet.get_all_records()
+                    all_val = sheet_obj.get_all_records()
                 lst_records.extend(
-                    [sheet.title.strip(), k.strip(), dct[NAME_COL_SERVICE].strip(), dct[NAME_COL_MASTER].strip()]
+                    [sheet_obj.title.strip(), k.strip(), dct[NAME_COL_SERVICE].strip(), dct[NAME_COL_MASTER].strip()]
                     for dct in all_val
                     for k, v in dct.items()
                     if v == client_record and k == date_today.time() < datetime.strptime(k, '%H:%M').time()
@@ -315,9 +325,9 @@ class GoogleSheets:
 
             elif date_today.date() < date_sheet.date() <= (date_today + timedelta(days=count_days)).date():
                 with lock:
-                    all_val = sheet.get_all_records()
+                    all_val = sheet_obj.get_all_records()
                 lst_records.extend(
-                    [sheet.title.strip(), k.strip(), dct[NAME_COL_SERVICE].strip(), dct[NAME_COL_MASTER].strip()]
+                    [sheet_obj.title.strip(), k.strip(), dct[NAME_COL_SERVICE].strip(), dct[NAME_COL_MASTER].strip()]
                     for dct in all_val
                     for k, v in dct.items()
                     if v == client_record
