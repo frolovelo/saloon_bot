@@ -1,11 +1,15 @@
-from config import TOKEN
-from google_sheet import GoogleSheets, get_cache_services
+"""
+Взаимодействие с Telegram
+"""
+from datetime import datetime
 from telebot import types, TeleBot
 from telebot.types import CallbackQuery, ReplyKeyboardRemove, \
     ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
+from config import TOKEN
 import telebot_calendar
+from google_sheet import GoogleSheets, get_cache_services
 from keyboards import create_markup_menu, button_to_menu
-from clear_dict import *
+import clear_dict
 
 bot = TeleBot(TOKEN)
 
@@ -33,11 +37,11 @@ def create_client(chat_id) -> GoogleSheets:
 
     :chat_id: id чата/клиента
     """
-    if CLIENT_DICT.get(chat_id):
-        return CLIENT_DICT[chat_id]
+    if clear_dict.CLIENT_DICT.get(chat_id):
+        return clear_dict.CLIENT_DICT[chat_id]
     client = GoogleSheets(chat_id)
-    CLIENT_DICT[chat_id] = client
-    TIMER_DICT[chat_id] = datetime.now()
+    clear_dict.CLIENT_DICT[chat_id] = client
+    clear_dict.TIMER_DICT[chat_id] = datetime.now()
     return client
 
 
@@ -58,7 +62,9 @@ def check_phone_number(message):
             """Получает объект <contact> -> вызывает функцию стартового меню"""
             if message_contact.contact is not None:
                 CLIENT_PHONE[message.chat.id] = message_contact.contact.phone_number
-                bot.send_message(message.chat.id, text='Спасибо за доверие!', reply_markup=ReplyKeyboardRemove())
+                bot.send_message(message.chat.id,
+                                 text='Спасибо за доверие!',
+                                 reply_markup=ReplyKeyboardRemove())
                 menu(message)
     else:
         menu(message)
@@ -67,14 +73,16 @@ def check_phone_number(message):
 @bot.message_handler(content_types=['text'])
 def any_word_before_number(message_any):
     """Обработчик любых текстовых сообщений"""
-    bot.send_message(message_any.chat.id, 'Пользоваться ботом возможно только при наличии номера телефона!\n'
-                                          'Взаимодействие с ботом происходит кнопками.')
+    bot.send_message(message_any.chat.id,
+                     text='Пользоваться ботом возможно только при наличии номера телефона!\n'
+                          'Взаимодействие с ботом происходит кнопками.')
 
 
 def menu(message):
     """Главное меню"""
-    clear_unused_info(message.chat.id)
-    bot.send_message(message.chat.id, "Выберите пункт меню:", reply_markup=create_markup_menu())
+    clear_dict.clear_unused_info(message.chat.id)
+    bot.send_message(message.chat.id, "Выберите пункт меню:",
+                     reply_markup=create_markup_menu())
 
 
 @bot.callback_query_handler(lambda call: call.data == 'CANCEL_RECORD')
@@ -88,9 +96,11 @@ def cancel_record(call):
     if len(records) != 0:
         markup = InlineKeyboardMarkup(row_width=1)
         markup.add(
-            *[InlineKeyboardButton(text=' - '.join(x[:3]), callback_data=f'CANCEL {ind}') for ind, x in
-              enumerate(records)])
-        markup.add(*button_to_menu(return_callback=None, menu_text='В главное меню'))
+            *[InlineKeyboardButton(text=' - '.join(x[:3]),
+                                   callback_data=f'CANCEL {ind}'
+                                   ) for ind, x in enumerate(records)])
+        markup.add(*button_to_menu(return_callback=None,
+                                   menu_text='В главное меню'))
         bot.edit_message_text(chat_id=call.message.chat.id,
                               message_id=call.message.message_id,
                               text='Какую запись вы хотите отменить?🙈',
@@ -111,8 +121,10 @@ def approve_cancel(call):
     Подтверждение отмены записи
     """
     markup = InlineKeyboardMarkup(row_width=2)
-    markup.add(*[InlineKeyboardButton(text='Подтверждаю', callback_data='APPROVE' + call.data),
-                 InlineKeyboardButton(text='В главное меню', callback_data='MENU')])
+    markup.add(*[InlineKeyboardButton(text='Подтверждаю',
+                                      callback_data='APPROVE' + call.data),
+                 InlineKeyboardButton(text='В главное меню',
+                                      callback_data='MENU')])
     bot.edit_message_text(chat_id=call.message.chat.id,
                           message_id=call.message.message_id,
                           text='Точно отменить?',
@@ -125,7 +137,7 @@ def set_cancel(call):
     Обработка inline callback запросов
     Отмена записи
     """
-    client = CLIENT_DICT.get(call.from_user.id)
+    client = clear_dict.CLIENT_DICT.get(call.from_user.id)
     if client:
         client_info = client.lst_records[int(call.data.split()[1])]
         client.date_record, client.time_record, client.name_service, client.name_master = client_info
@@ -174,7 +186,9 @@ def choice_service(call):
 
     all_serv = get_cache_services()
     markup = InlineKeyboardMarkup(row_width=3)
-    markup.add(*[InlineKeyboardButton(text=x, callback_data='SERVICE' + x) for x in all_serv.keys()])
+    markup.add(*[InlineKeyboardButton(text=x,
+                                      callback_data='SERVICE' + x
+                                      ) for x in all_serv.keys()])
     markup.add(*button_to_menu(None))
     bot.edit_message_text(chat_id=call.message.chat.id,
                           message_id=call.message.message_id,
@@ -188,13 +202,16 @@ def choice_master(call):
     Обработка inline callback запросов
     Выбор мастера
     """
-    client = CLIENT_DICT.get(call.from_user.id)
+    client = clear_dict.CLIENT_DICT.get(call.from_user.id)
     if client:
         client.name_service = call.data.lstrip('SERVICE')
         dct = get_cache_services()
         markup = InlineKeyboardMarkup(row_width=2)
-        markup.add(*[InlineKeyboardButton(text=x, callback_data='MASTER' + x) for x in dct[client.name_service]])
-        markup.add(InlineKeyboardButton(text='Любой мастер', callback_data='MASTER' + 'ЛЮБОЙ'))
+        markup.add(*[InlineKeyboardButton(text=x,
+                                          callback_data='MASTER' + x
+                                          ) for x in dct[client.name_service]])
+        markup.add(InlineKeyboardButton(text='Любой мастер',
+                                        callback_data='MASTER' + 'ЛЮБОЙ'))
         markup.add(*button_to_menu('RECORD'))
         bot.edit_message_text(chat_id=call.message.chat.id,
                               message_id=call.message.message_id,
@@ -210,7 +227,7 @@ def choice_date(call):
     Обработка inline callback запросов
     Выбор даты
     """
-    client = CLIENT_DICT.get(call.from_user.id)
+    client = clear_dict.CLIENT_DICT.get(call.from_user.id)
     if client:
         if call.data.lstrip('MASTER') != 'ЛЮБОЙ':
             client.name_master = call.data.lstrip('MASTER')
@@ -229,12 +246,13 @@ def choice_date(call):
                                   reply_markup=markup)
         else:
             client.lst_currant_date = lst
-            CALENDAR_DICT[call.message.chat.id] = str(call.message.chat.id)
+            clear_dict.CALENDAR_DICT[call.message.chat.id] = str(call.message.chat.id)
             bot.edit_message_text(chat_id=call.from_user.id,
                                   message_id=call.message.message_id,
                                   text='Выбери доступную дату:\n ✅ - есть свободное время',
                                   reply_markup=telebot_calendar.create_calendar(
-                                      name='CALENDAR' + CALENDAR_DICT[call.message.chat.id], lst_current_date=lst)
+                                      name='CALENDAR' + clear_dict.CALENDAR_DICT[call.message.chat.id],
+                                      lst_current_date=lst)
                                   )
     else:
         go_to_menu(call)
@@ -246,7 +264,7 @@ def choice_time(call: CallbackQuery):
     Обработка inline callback запросов
     Выбор времени
     """
-    client = CLIENT_DICT.get(call.from_user.id)
+    client = clear_dict.CLIENT_DICT.get(call.from_user.id)
     if client:
         lst = client.lst_currant_date
         # At this point, we are sure that this calendar is ours. So we cut the line by the separator of our calendar
@@ -263,12 +281,15 @@ def choice_time(call: CallbackQuery):
             client.dct_currant_time = lst_times
 
             markup = InlineKeyboardMarkup(row_width=3)
-            markup.add(*[InlineKeyboardButton(text=x, callback_data='TIME' + x) for x in lst_times])
+            markup.add(*[InlineKeyboardButton(text=x,
+                                              callback_data='TIME' + x
+                                              ) for x in lst_times])
             master = 'MASTER' + (client.name_master if client.name_master else 'ЛЮБОЙ')
             markup.add(*button_to_menu(master))
             text = "Выберите время:" if len(lst_times) != 0 else "Для выбранного даты нет доступного времени!\n" \
                                                                  "Попробуй другую дату😉"
-            bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
+            bot.delete_message(chat_id=call.message.chat.id,
+                               message_id=call.message.message_id)
             bot.send_message(
                 chat_id=call.from_user.id,
                 text=text,
@@ -290,18 +311,19 @@ def approve_record(call):
     Обработка inline callback запросов
     Подтверждение отмены записи
     """
-    client = CLIENT_DICT.get(call.from_user.id)
+    client = clear_dict.CLIENT_DICT.get(call.from_user.id)
 
     if client:
         client.time_record = call.data.lstrip('TIME')
-        id_calendar = CALENDAR_DICT[call.from_user.id]
+        id_calendar = clear_dict.CALENDAR_DICT[call.from_user.id]
         date_string = client.date_record
         date_object = datetime.strptime(date_string, '%d.%m.%y')
         formatted_date = date_object.strftime('%Y:') + str(date_object.month) + ':' + str(date_object.day)
         name_calendar = 'CALENDAR' + id_calendar + ':DAY:' + formatted_date
 
         markup = InlineKeyboardMarkup(row_width=2)
-        markup.add(InlineKeyboardButton(text='Подтверждаю', callback_data='APP_REC'))
+        markup.add(InlineKeyboardButton(text='Подтверждаю',
+                                        callback_data='APP_REC'))
         markup.add(*button_to_menu(name_calendar))
         bot.edit_message_text(chat_id=call.message.chat.id,
                               message_id=call.message.message_id,
@@ -321,7 +343,7 @@ def set_time(call):
     Обработка inline callback запросов
     Выбор времени
     """
-    client = CLIENT_DICT.get(call.from_user.id)
+    client = clear_dict.CLIENT_DICT.get(call.from_user.id)
     if client:
         id_client = get_client_id(call.message.chat.id, call.from_user.username)
         if client.set_time(id_client):

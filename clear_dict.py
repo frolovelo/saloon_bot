@@ -1,3 +1,6 @@
+"""
+Хранение информации о пользователе и отчистка
+"""
 from datetime import datetime, timedelta
 from threading import Lock, Thread
 from time import sleep
@@ -58,9 +61,9 @@ def clear_client_dict(period_clear_minutes=60) -> None:
         at_now = datetime.now()
         lst_to_del = []
         with lock:
-            for k, v in TIMER_DICT.items():
-                if v + timedelta(minutes=period_clear_minutes) >= at_now:
-                    lst_to_del.append(k)
+            for key, val in TIMER_DICT.items():
+                if val + timedelta(minutes=period_clear_minutes) >= at_now:
+                    lst_to_del.append(key)
             for chat_id in lst_to_del:
                 clear_all_dict(chat_id)
 

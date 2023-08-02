@@ -1,3 +1,6 @@
+"""
+Календарь из inline-кнопок
+"""
 import datetime
 import calendar
 import typing

@@ -1,12 +1,15 @@
-from datetime import datetime, timedelta, time
-from threading import Lock
+"""
+Взаимодействие с Google Sheets
+"""
+from datetime import datetime, timedelta
 from time import time
-from google.oauth2.service_account import Credentials
-import gspread
-from concurrent.futures import ThreadPoolExecutor
-from cachetools import TTLCache
-from retrying import retry
+from threading import Lock
 import json
+from concurrent.futures import ThreadPoolExecutor
+from google.oauth2.service_account import Credentials
+from retrying import retry
+from cachetools import TTLCache
+import gspread
 
 myscope = ["https://www.googleapis.com/auth/spreadsheets",
            "https://www.googleapis.com/auth/drive"]
@@ -177,7 +180,7 @@ class GoogleSheets:
                 return False
             date_sheet = datetime.strptime(sheet_obj.title.strip(), '%d.%m.%y').date()
             date_today = datetime.now()
-            if not (date_today.date() <= date_sheet <= (datetime.now().date() + timedelta(days=count_days))):
+            if not date_today.date() <= date_sheet <= (datetime.now().date() + timedelta(days=count_days)):
                 return False
             with lock:
                 val = sheet_obj.get_all_records()

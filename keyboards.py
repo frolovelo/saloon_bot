@@ -1,3 +1,6 @@
+"""
+Создание клавиатуры главного меню и кнопок "Назад"/"Отмена"
+"""
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
@@ -31,5 +34,4 @@ def button_to_menu(return_callback: str | None, return_text='Назад', menu_t
     if return_callback:
         return [InlineKeyboardButton(text=return_text, callback_data=return_callback),
                 InlineKeyboardButton(text=menu_text, callback_data='MENU')]
-    else:
-        return [InlineKeyboardButton(text=menu_text, callback_data='MENU')]
+    return [InlineKeyboardButton(text=menu_text, callback_data='MENU')]
