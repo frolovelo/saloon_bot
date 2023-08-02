@@ -9,7 +9,7 @@ from clear_dict import *
 
 bot = TeleBot(TOKEN)
 
-client_phone_number = {467168798: '+79522600066', 288041146: '+79215528067'}  # sql сделать
+CLIENT_PHONE = {467168798: '+79522600066', 288041146: '+79215528067'}  # sql сделать
 
 
 def get_client_id(client_id, client_username) -> str:
@@ -19,9 +19,9 @@ def get_client_id(client_id, client_username) -> str:
     :param client_username: username пользователя
     :return: 'id: id @username tel: phone'"""
     id_client = f"id: {str(client_id)}\n@{str(client_username)}\n"
-    if client_phone_number.get(client_id, None) is not None:
-        if client_phone_number[client_id] != '':
-            id_client += 'tel: ' + client_phone_number[client_id]
+    if CLIENT_PHONE.get(client_id, None) is not None:
+        if CLIENT_PHONE[client_id] != '':
+            id_client += 'tel: ' + CLIENT_PHONE[client_id]
         else:
             id_client += 'tel: None'
     return id_client
@@ -33,11 +33,11 @@ def create_client(chat_id) -> GoogleSheets:
 
     :chat_id: id чата/клиента
     """
-    if client_dict.get(chat_id):
-        return client_dict[chat_id]
+    if CLIENT_DICT.get(chat_id):
+        return CLIENT_DICT[chat_id]
     client = GoogleSheets(chat_id)
-    client_dict[chat_id] = client
-    timer_dict[chat_id] = datetime.now()
+    CLIENT_DICT[chat_id] = client
+    TIMER_DICT[chat_id] = datetime.now()
     return client
 
 
@@ -45,7 +45,7 @@ def create_client(chat_id) -> GoogleSheets:
 def check_phone_number(message):
     """Запрашивает номер телефона у пользователя единожды"""
 
-    if client_phone_number.get(message.chat.id, None) is None:
+    if CLIENT_PHONE.get(message.chat.id, None) is None:
         markup = ReplyKeyboardMarkup(one_time_keyboard=True, resize_keyboard=True)
         button_phone = types.KeyboardButton(text="Отправить телефон 📞",
                                             request_contact=True)
@@ -57,7 +57,7 @@ def check_phone_number(message):
         def contact(message_contact):
             """Получает объект <contact> -> вызывает функцию стартового меню"""
             if message_contact.contact is not None:
-                client_phone_number[message.chat.id] = message_contact.contact.phone_number
+                CLIENT_PHONE[message.chat.id] = message_contact.contact.phone_number
                 bot.send_message(message.chat.id, text='Спасибо за доверие!', reply_markup=ReplyKeyboardRemove())
                 menu(message)
     else:
@@ -125,7 +125,7 @@ def set_cancel(call):
     Обработка inline callback запросов
     Отмена записи
     """
-    client = client_dict.get(call.from_user.id)
+    client = CLIENT_DICT.get(call.from_user.id)
     if client:
         client_info = client.lst_records[int(call.data.split()[1])]
         client.date_record, client.time_record, client.name_service, client.name_master = client_info
@@ -188,7 +188,7 @@ def choice_master(call):
     Обработка inline callback запросов
     Выбор мастера
     """
-    client = client_dict.get(call.from_user.id)
+    client = CLIENT_DICT.get(call.from_user.id)
     if client:
         client.name_service = call.data.lstrip('SERVICE')
         dct = get_cache_services()
@@ -210,7 +210,7 @@ def choice_date(call):
     Обработка inline callback запросов
     Выбор даты
     """
-    client = client_dict.get(call.from_user.id)
+    client = CLIENT_DICT.get(call.from_user.id)
     if client:
         if call.data.lstrip('MASTER') != 'ЛЮБОЙ':
             client.name_master = call.data.lstrip('MASTER')
@@ -229,12 +229,12 @@ def choice_date(call):
                                   reply_markup=markup)
         else:
             client.lst_currant_date = lst
-            calendar_dict[call.message.chat.id] = str(call.message.chat.id)
+            CALENDAR_DICT[call.message.chat.id] = str(call.message.chat.id)
             bot.edit_message_text(chat_id=call.from_user.id,
                                   message_id=call.message.message_id,
                                   text='Выбери доступную дату:\n ✅ - есть свободное время',
                                   reply_markup=telebot_calendar.create_calendar(
-                                      name='CALENDAR' + calendar_dict[call.message.chat.id], lst_current_date=lst)
+                                      name='CALENDAR' + CALENDAR_DICT[call.message.chat.id], lst_current_date=lst)
                                   )
     else:
         go_to_menu(call)
@@ -246,7 +246,7 @@ def choice_time(call: CallbackQuery):
     Обработка inline callback запросов
     Выбор времени
     """
-    client = client_dict.get(call.from_user.id)
+    client = CLIENT_DICT.get(call.from_user.id)
     if client:
         lst = client.lst_currant_date
         # At this point, we are sure that this calendar is ours. So we cut the line by the separator of our calendar
@@ -290,11 +290,11 @@ def approve_record(call):
     Обработка inline callback запросов
     Подтверждение отмены записи
     """
-    client = client_dict.get(call.from_user.id)
+    client = CLIENT_DICT.get(call.from_user.id)
 
     if client:
         client.time_record = call.data.lstrip('TIME')
-        id_calendar = calendar_dict[call.from_user.id]
+        id_calendar = CALENDAR_DICT[call.from_user.id]
         date_string = client.date_record
         date_object = datetime.strptime(date_string, '%d.%m.%y')
         formatted_date = date_object.strftime('%Y:') + str(date_object.month) + ':' + str(date_object.day)
@@ -321,7 +321,7 @@ def set_time(call):
     Обработка inline callback запросов
     Выбор времени
     """
-    client = client_dict.get(call.from_user.id)
+    client = CLIENT_DICT.get(call.from_user.id)
     if client:
         id_client = get_client_id(call.message.chat.id, call.from_user.username)
         if client.set_time(id_client):

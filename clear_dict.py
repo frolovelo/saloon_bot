@@ -3,11 +3,11 @@ from threading import Lock, Thread
 from time import sleep
 
 # хранит объекты GoogleSheet по ключу id
-client_dict = {}
+CLIENT_DICT = {}
 # хранит название календаря по ключу id
-calendar_dict = {}
+CALENDAR_DICT = {}
 # хранит время создания объекта GoogleSheet
-timer_dict = {}
+TIMER_DICT = {}
 # Lock для синхронизации доступа к словарям
 lock = Lock()
 
@@ -19,8 +19,8 @@ def clear_unused_info(chat_id) -> None:
 
         :param chat_id: id пользователя
         """
-    if client_dict.get(chat_id):
-        client = client_dict[chat_id]
+    if CLIENT_DICT.get(chat_id):
+        client = CLIENT_DICT[chat_id]
         client.lst_currant_date = None
         client.dct_currant_time = None
         # client.lst_records = None
@@ -29,8 +29,8 @@ def clear_unused_info(chat_id) -> None:
         client.date_record = None
         client.time_record = None
 
-    if calendar_dict.get(chat_id):
-        del calendar_dict[chat_id]
+    if CALENDAR_DICT.get(chat_id):
+        del CALENDAR_DICT[chat_id]
 
 
 def clear_all_dict(chat_id) -> None:
@@ -39,12 +39,12 @@ def clear_all_dict(chat_id) -> None:
 
     :param chat_id: id пользователя
     """
-    if client_dict.get(chat_id):
-        del client_dict[chat_id]
-    if calendar_dict.get(chat_id):
-        del calendar_dict[chat_id]
-    if timer_dict.get(chat_id):
-        del timer_dict[chat_id]
+    if CLIENT_DICT.get(chat_id):
+        del CLIENT_DICT[chat_id]
+    if CALENDAR_DICT.get(chat_id):
+        del CALENDAR_DICT[chat_id]
+    if TIMER_DICT.get(chat_id):
+        del TIMER_DICT[chat_id]
 
 
 def clear_client_dict(period_clear_minutes=60) -> None:
@@ -58,7 +58,7 @@ def clear_client_dict(period_clear_minutes=60) -> None:
         at_now = datetime.now()
         lst_to_del = []
         with lock:
-            for k, v in timer_dict.items():
+            for k, v in TIMER_DICT.items():
                 if v + timedelta(minutes=period_clear_minutes) >= at_now:
                     lst_to_del.append(k)
             for chat_id in lst_to_del:

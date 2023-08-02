@@ -17,17 +17,17 @@ client_main = gspread.authorize(creds)
 # Название таблицы
 sh = client_main.open('SaloonSheet')
 # Страницы таблицы, которые должны игнорироваться во избежание проблем
-ignor_worksheets = ['Работники']
+IGNOR_WORKSHEETS = ['Работники']
 # Страница таблицы, на которой перечислены все действующие работники и услуги
-name_sheet_workers = 'Работники'
+NAME_SHEET_WORKERS = 'Работники'
 # Названия основных колонок(очередность важна!)
-name_col_service = 'Услуга'
-name_col_master = 'Мастер'
+NAME_COL_SERVICE = 'Услуга'
+NAME_COL_MASTER = 'Мастер'
 
 # Кэш листов с TTL (временем жизни) в 12 часов
-cache_worksheets = TTLCache(maxsize=2, ttl=12 * 60 * 60)
+CACHE_WORKSHEETS = TTLCache(maxsize=2, ttl=12 * 60 * 60)
 # Кэш доступных дат для услуги-мастера с TTL (временем жизни) в 15 минут
-cache_days = TTLCache(maxsize=6, ttl=15 * 60)
+CACHE_DAYS = TTLCache(maxsize=6, ttl=15 * 60)
 # Lock для синхронизации доступа к словарям
 lock = Lock()
 
@@ -51,8 +51,8 @@ def get_cache_days(service_name: str, master_name: str) -> list | None:
     :param service_name: Название услуги
     :param master_name: Имя мастера
     """
-    if service_name in cache_days:
-        cached_value = cache_days[service_name]
+    if service_name in CACHE_DAYS:
+        cached_value = CACHE_DAYS[service_name]
         cached_dict = deserialize_dict(cached_value)
         if master_name in cached_dict:
             return cached_dict[master_name]
@@ -70,16 +70,16 @@ def update_cache_days(service_name: str, master_name: str, available_dates: list
     if master_name is None:
         master_name = 'null'
 
-    if service_name in cache_days:
-        cached_value = cache_days[service_name]
+    if service_name in CACHE_DAYS:
+        cached_value = CACHE_DAYS[service_name]
         cached_dict = deserialize_dict(cached_value)
         if master_name not in cached_dict:
             cached_dict[master_name] = available_dates
             cache_value = serialize_dict(cached_dict)
-            cache_days[service_name] = cache_value
+            CACHE_DAYS[service_name] = cache_value
     else:
         cache_value = serialize_dict({master_name: available_dates})
-        cache_days[service_name] = cache_value
+        CACHE_DAYS[service_name] = cache_value
 
 
 @retry(wait_exponential_multiplier=3000, wait_exponential_max=3000)
@@ -88,13 +88,13 @@ def get_sheet_names() -> list:
     Запрашивает все имена листов таблицы
     """
     # Проверяем, есть ли результат в кэше
-    if 'worksheets' in cache_worksheets:
-        return cache_worksheets['worksheets']
+    if 'worksheets' in CACHE_WORKSHEETS:
+        return CACHE_WORKSHEETS['worksheets']
     with lock:
         worksheets = sh.worksheets()
 
     # Кэшируем результат
-    cache_worksheets['worksheets'] = worksheets
+    CACHE_WORKSHEETS['worksheets'] = worksheets
     return worksheets
 
 
@@ -103,16 +103,16 @@ def get_cache_services() -> dict:
     """
     Запрашивает все услуги
     """
-    if 'services' in cache_worksheets:
-        return cache_worksheets['services']
+    if 'services' in CACHE_WORKSHEETS:
+        return CACHE_WORKSHEETS['services']
     dct = {}
     with lock:
-        ws = sh.worksheet(name_sheet_workers)
+        ws = sh.worksheet(NAME_SHEET_WORKERS)
     for i in ws.get_all_records():
-        dct[i[name_col_service].strip()] = dct.get(i[name_col_service].strip(), [])
-        dct[i[name_col_service].strip()].append(i[name_col_master].strip())
+        dct[i[NAME_COL_SERVICE].strip()] = dct.get(i[NAME_COL_SERVICE].strip(), [])
+        dct[i[NAME_COL_SERVICE].strip()].append(i[NAME_COL_MASTER].strip())
 
-    cache_worksheets['services'] = dct
+    CACHE_WORKSHEETS['services'] = dct
     return dct
 
 
@@ -173,7 +173,7 @@ class GoogleSheets:
 
             :return: True - есть доступные свободные слоты; False - все слоты заняты или нет актуальных дат
             """
-            if sheet_obj.title in ignor_worksheets:
+            if sheet_obj.title in IGNOR_WORKSHEETS:
                 return False
             date_sheet = datetime.strptime(sheet_obj.title.strip(), '%d.%m.%y').date()
             date_today = datetime.now()
@@ -185,18 +185,18 @@ class GoogleSheets:
 
                 if date_today.date() == date_sheet:
                     if (self.name_master is not None and
-                        dct[name_col_master].strip() == self.name_master and
-                        dct[name_col_service].strip() == self.name_service) or \
+                        dct[NAME_COL_MASTER].strip() == self.name_master and
+                        dct[NAME_COL_SERVICE].strip() == self.name_service) or \
                             (self.name_master is None and
-                             dct[name_col_service].strip() == self.name_service):
+                             dct[NAME_COL_SERVICE].strip() == self.name_service):
                         for k, v in dct.items():
                             if str(v).strip() == '' and date_today.time() < datetime.strptime(k, '%H:%M').time():
                                 return sheet_obj.title
                     continue
 
-                if (self.name_master is not None and dct[name_col_master].strip() == self.name_master and
-                    dct[name_col_service].strip() == self.name_service) \
-                        or (self.name_master is None and dct[name_col_service].strip() == self.name_service):
+                if (self.name_master is not None and dct[NAME_COL_MASTER].strip() == self.name_master and
+                    dct[NAME_COL_SERVICE].strip() == self.name_service) \
+                        or (self.name_master is None and dct[NAME_COL_SERVICE].strip() == self.name_service):
                     for k, v in dct.items():
                         if str(v).strip() == '':
                             return sheet_obj.title
@@ -225,16 +225,16 @@ class GoogleSheets:
 
         if self.date_record == datetime.now().strftime('%d.%m.%y'):
             lst = [k.strip() for i in all_val
-                   if (self.name_master is None and i[name_col_service].strip() == self.name_service) or
-                   (self.name_master is not None and i[name_col_service].strip() == self.name_service and
-                    i[name_col_master].strip() == self.name_master)
+                   if (self.name_master is None and i[NAME_COL_SERVICE].strip() == self.name_service) or
+                   (self.name_master is not None and i[NAME_COL_SERVICE].strip() == self.name_service and
+                    i[NAME_COL_MASTER].strip() == self.name_master)
                    for k, v in i.items() if str(v).strip() == '' and
                    datetime.now().time() < datetime.strptime(k, '%H:%M').time()]
         else:
             lst = [k.strip() for i in all_val
-                   if (self.name_master is None and i[name_col_service].strip() == self.name_service) or
-                   (self.name_master is not None and i[name_col_service].strip() == self.name_service and
-                    i[name_col_master].strip() == self.name_master)
+                   if (self.name_master is None and i[NAME_COL_SERVICE].strip() == self.name_service) or
+                   (self.name_master is not None and i[NAME_COL_SERVICE].strip() == self.name_service and
+                    i[NAME_COL_MASTER].strip() == self.name_master)
                    for k, v in i.items() if str(v).strip() == '']
 
         if len(lst) > 0:
@@ -262,14 +262,14 @@ class GoogleSheets:
         for i in all_val:
             row_num += 1
             col_num = 0
-            if (self.name_master is None and i[name_col_service].strip() == self.name_service) or \
-                    (self.name_master is not None and i[name_col_service].strip() == self.name_service and
-                     i[name_col_master].strip() == self.name_master):
+            if (self.name_master is None and i[NAME_COL_SERVICE].strip() == self.name_service) or \
+                    (self.name_master is not None and i[NAME_COL_SERVICE].strip() == self.name_service and
+                     i[NAME_COL_MASTER].strip() == self.name_master):
                 for key_time, val_use in i.items():
                     col_num += 1
                     if key_time.strip() == self.time_record and val_use.strip() == search_criteria:
                         if self.name_master is None:
-                            self.name_master = i[name_col_master].strip()
+                            self.name_master = i[NAME_COL_MASTER].strip()
                         sh.worksheet(self.date_record).update_cell(row_num, col_num, f'{client_record}')
                         if (self.lst_records and search_criteria == '') or (self.lst_records and client_record == ''):
                             record = [self.date_record, self.time_record, self.name_service, self.name_master]
@@ -296,7 +296,7 @@ class GoogleSheets:
         @retry(wait_exponential_multiplier=3000, wait_exponential_max=3000)
         def check_record(sheet) -> None:
             """Поиск брони клиента"""
-            if sheet.title in ignor_worksheets:
+            if sheet.title in IGNOR_WORKSHEETS:
                 return None
             date_sheet = datetime.strptime(sheet.title, '%d.%m.%y')
             date_today = datetime.now()
@@ -304,7 +304,7 @@ class GoogleSheets:
                 with lock:
                     all_val = sheet.get_all_records()
                 lst_records.extend(
-                    [sheet.title.strip(), k.strip(), dct[name_col_service].strip(), dct[name_col_master].strip()]
+                    [sheet.title.strip(), k.strip(), dct[NAME_COL_SERVICE].strip(), dct[NAME_COL_MASTER].strip()]
                     for dct in all_val
                     for k, v in dct.items()
                     if v == client_record and k == date_today.time() < datetime.strptime(k, '%H:%M').time()
@@ -314,7 +314,7 @@ class GoogleSheets:
                 with lock:
                     all_val = sheet.get_all_records()
                 lst_records.extend(
-                    [sheet.title.strip(), k.strip(), dct[name_col_service].strip(), dct[name_col_master].strip()]
+                    [sheet.title.strip(), k.strip(), dct[NAME_COL_SERVICE].strip(), dct[NAME_COL_MASTER].strip()]
                     for dct in all_val
                     for k, v in dct.items()
                     if v == client_record
