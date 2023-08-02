@@ -90,7 +90,7 @@ client_main = gspread.Client(creds)
 4. Для тестового запуска <u>*рекомендуется*</u> скопировать данные из ***примера таблицы:*** https://docs.google.com/spreadsheets/d/1VmucIj0jhJcIDv3tkfpXtlLoDRh4Zhoa8DuCTzOuhuQ/edit?usp=sharing
 
 
-5. Смените данные на свои в [google_sheet.py](google_sheet.py):
+5. Смените данные на свои в [google_sheet.py](google_sheet.py)
 ```python
 # Название таблицы
 sh = client_main.open('YOUR_TABLE_NAME')
@@ -137,7 +137,22 @@ NAME_COL_MASTER = 'Мастер'
 * [telebot_calendar.py](telebot_calendar.py) - клавиатура в виде календаря
 * [requirements.txt](requirements.txt) - библиотеки
 
+## Вклад и разработка
+Если вы обнаружили ошибки или у вас есть предложения по улучшению проекта, пожалуйста, создайте Issue или Pull Request в репозитории проекта.
 
 ## Референсы
 
   [purgy](https://github.com/purgy/telebot-calendar) - Telebot календарь
+
+## TO-DO
+
+- [x] Безопасность потоков 
+- [x] Дополнительные запросы к *Google Sheets* при возникновении ошибок  ```google_sheet.py```
+- [x] Оптимальное использование памяти, отчистка по таймауту ```clear-dict.py```
+- [x] Кэширование данных из *Google Sheets* для экономии кол-ва запросов к api
+- [ ] SQLAlchemy/MongoDB для хранения номеров телефона пользователя
+- [ ] Удаление дат, которые были свободны, но в процессе бронирования заполнились
+- [ ] Асинхронный Telebot + Анимация загрузки
+- [ ] Функционал напоминаний о записи
+- [ ] Создание вспомогательного бота админа для удаленной настройки бота
+- [ ] Отправка уведомлений о новых записях администратору салона на доп. аккаунт telegram
