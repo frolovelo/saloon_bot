@@ -1,20 +1,21 @@
-# saloon_bot
+# saloon_bot 💅
 
-**saloon_bot** - telegram bot для записи в салон красоты с использованием Google Sheets
+**saloon_bot** - *Telegram bot* для записи в салон красоты с использованием *Google Sheets*
 
 ![Static Badge](https://img.shields.io/badge/python-3.11-blue)
 ![Static Badge](https://img.shields.io/badge/TelegramBotAPI-4.12.0-blue)
 ![Static Badge](https://img.shields.io/badge/gspread-5.10.0-blue)
-
 ![Static Badge](https://img.shields.io/badge/pylint_score-9%2C5-green)
 
-<img style="height:460px; width:212px;" src="https://i.ibb.co/gFCT55h/IMG-1551-1.gif" alt="IMG-1551-1">
+<div style="display: flex; justify-content: center;">
+  <img style="height:460px; width:212px;" src="https://i.ibb.co/gFCT55h/IMG-1551-1.gif" alt="IMG-1551-1">
+</div>
 
 ------
 
 ## Описание
-Данный проект представляет собой телеграмм бота, который позволяет пользователям записываться в салон красоты. 
-Бот использует Google Sheets для хранения информации о клиентах и их записях.
+Данный проект представляет собой ***телеграмм бота***, который позволяет пользователям записываться в салон красоты. 
+Бот использует ***Google Sheets*** для хранения информации о клиентах и их записях.
 
 **Пример таблицы:** https://docs.google.com/spreadsheets/d/1VmucIj0jhJcIDv3tkfpXtlLoDRh4Zhoa8DuCTzOuhuQ/edit?usp=sharing
 
@@ -57,11 +58,11 @@ source venv/bin/activate
 
 ## Использование
 
-1. Создайте config.py с содержимым:
+1. Создайте ***config.py*** с содержимым:
 ```python
 TOKEN = "YOUR_BOT_TOKEN"
 ```
-2. Получите json ключ от Google Sheets (как получить: https://www.youtube.com/watch?v=82DGz7IxW7c)
+2. Получите **json key** от *Google Sheets* (как получить: https://www.youtube.com/watch?v=82DGz7IxW7c)
 
 Структура ключа:
 ```json
@@ -86,10 +87,10 @@ creds = Credentials.from_service_account_file('YOUR_NAME_KEY.json', scopes=mysco
 client_main = gspread.Client(creds)
 ```
 
-4. Для тестового запуска рекомендуется скопировать данные из ***примера таблицы:*** https://docs.google.com/spreadsheets/d/1VmucIj0jhJcIDv3tkfpXtlLoDRh4Zhoa8DuCTzOuhuQ/edit?usp=sharing
+4. Для тестового запуска <u>*рекомендуется*</u> скопировать данные из ***примера таблицы:*** https://docs.google.com/spreadsheets/d/1VmucIj0jhJcIDv3tkfpXtlLoDRh4Zhoa8DuCTzOuhuQ/edit?usp=sharing
 
 
-5. Сменить данные на свои в [google_sheet.py](google_sheet.py):
+5. Смените данные на свои в [google_sheet.py](google_sheet.py):
 ```python
 # Название таблицы
 sh = client_main.open('YOUR_TABLE_NAME')
@@ -108,7 +109,17 @@ NAME_COL_MASTER = 'Мастер'
 
 #### Примечание:
 1. Лист ```NAME_SHEET_WORKERS``` требуется для выдачи клиентам списка мастеров и услуг;
+
+<div style="display: flex; justify-content: center;">
+    <img src="https://i.ibb.co/RTKfpVF/image.png" alt="image" border="0">
+</div>
+
 2. Листы для записи должны иметь определенный формат имени: 'дд.мм.гг';
+
+<div style="display: flex; justify-content: center;">
+    <img src="https://i.ibb.co/LRRdM9F/image.png" alt="image" border="0">
+</div>
+
 3. В листах для записи следует соблюдать лишь первые две колонки: 'Услуга', 'Мастер', 
 время для записи вы можете ставить на своё усмотрение.
 
