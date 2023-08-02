@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, time
 from threading import Lock
 from time import time
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 import gspread
 from concurrent.futures import ThreadPoolExecutor
 from cachetools import TTLCache
@@ -12,8 +12,8 @@ myscope = ["https://www.googleapis.com/auth/spreadsheets",
            "https://www.googleapis.com/auth/drive"]
 
 # Название файла json ключа
-creds = ServiceAccountCredentials.from_json_keyfile_name('beautysaloon.json', myscope)
-client_main = gspread.authorize(creds)
+creds = Credentials.from_service_account_file('beautysaloon.json', scopes=myscope)
+client_main = gspread.Client(creds)
 # Название таблицы
 sh = client_main.open('SaloonSheet')
 # Страницы таблицы, которые должны игнорироваться во избежание проблем
