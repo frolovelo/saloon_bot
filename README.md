@@ -8,7 +8,7 @@
 
 ![Static Badge](https://img.shields.io/badge/pylint_score-9%2C5-green)
 
-<img style="height:400px; width:185px;" src="https://i.ibb.co/gFCT55h/IMG-1551-1.gif" alt="IMG-1551-1">
+<img style="height:460px; width:212px;" src="https://i.ibb.co/gFCT55h/IMG-1551-1.gif" alt="IMG-1551-1">
 
 ------
 
