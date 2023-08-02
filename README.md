@@ -7,9 +7,9 @@
 ![Static Badge](https://img.shields.io/badge/gspread-5.10.0-blue)
 ![Static Badge](https://img.shields.io/badge/pylint_score-9%2C5-green)
 
-<div style="display: flex; justify-content: center;">
+<p align="center">
   <img style="height:460px; width:212px;" src="https://i.ibb.co/gFCT55h/IMG-1551-1.gif" alt="IMG-1551-1">
-</div>
+</p>
 
 ------
 
@@ -110,15 +110,15 @@ NAME_COL_MASTER = 'Мастер'
 #### Примечание:
 1. Лист ```NAME_SHEET_WORKERS``` требуется для выдачи клиентам списка мастеров и услуг;
 
-<div style="display: flex; justify-content: center;">
+<p align="center">
     <img src="https://i.ibb.co/RTKfpVF/image.png" alt="image" border="0">
-</div>
+</p>
 
 2. Листы для записи должны иметь определенный формат имени: 'дд.мм.гг';
 
-<div style="display: flex; justify-content: center;">
+<p align="center">
     <img src="https://i.ibb.co/LRRdM9F/image.png" alt="image" border="0">
-</div>
+</p>
 
 3. В листах для записи следует соблюдать лишь первые две колонки: 'Услуга', 'Мастер', 
 время для записи вы можете ставить на своё усмотрение.
