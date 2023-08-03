@@ -204,7 +204,7 @@ def choice_master(call):
     """
     client = clear_dict.CLIENT_DICT.get(call.from_user.id)
     if client:
-        client.name_service = call.data.lstrip('SERVICE')
+        client.name_service = call.data[len('SERVICE'):]
         dct = get_cache_services()
         markup = InlineKeyboardMarkup(row_width=2)
         markup.add(*[InlineKeyboardButton(text=x,
@@ -229,8 +229,8 @@ def choice_date(call):
     """
     client = clear_dict.CLIENT_DICT.get(call.from_user.id)
     if client:
-        if call.data.lstrip('MASTER') != 'ЛЮБОЙ':
-            client.name_master = call.data.lstrip('MASTER')
+        if call.data[len('MASTER'):] != 'ЛЮБОЙ':
+            client.name_master = call.data[len('MASTER'):]
         else:
             client.name_master = None
         lst = client.get_all_days()
@@ -314,7 +314,7 @@ def approve_record(call):
     client = clear_dict.CLIENT_DICT.get(call.from_user.id)
 
     if client:
-        client.time_record = call.data.lstrip('TIME')
+        client.time_record = call.data[len('TIME'):]
         id_calendar = clear_dict.CALENDAR_DICT[call.from_user.id]
         date_string = client.date_record
         date_object = datetime.strptime(date_string, '%d.%m.%y')
