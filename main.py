@@ -65,7 +65,7 @@ def check_phone_number(message):
                 bot.send_message(message.chat.id,
                                  text='Спасибо за доверие!',
                                  reply_markup=ReplyKeyboardRemove())
-                menu(message)
+                menu(message_contact)
     else:
         menu(message)
 

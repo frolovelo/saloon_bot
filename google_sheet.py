@@ -10,10 +10,13 @@ from google.oauth2.service_account import Credentials
 from retrying import retry
 from cachetools import TTLCache
 import gspread
+from pytz import timezone
 
 myscope = ["https://www.googleapis.com/auth/spreadsheets",
            "https://www.googleapis.com/auth/drive"]
 
+# Временная зона
+tz = timezone("Europe/Moscow")
 # Название файла json ключа
 creds = Credentials.from_service_account_file('beautysaloon.json', scopes=myscope)
 client_main = gspread.Client(creds)
@@ -184,8 +187,8 @@ class GoogleSheets:
                 print(ex)
                 print(sheet_obj.title, '- Добавьте лист в IGNOR_WORKSHEETS')
                 return False
-            date_today = datetime.now()
-            if not date_today.date() <= date_sheet <= (datetime.now().date() + timedelta(days=count_days)):
+            date_today = datetime.now(tz=tz)
+            if not date_today.date() <= date_sheet <= (datetime.now(tz=tz).date() + timedelta(days=count_days)):
                 return False
             with lock:
                 val = sheet_obj.get_all_records()
@@ -231,13 +234,13 @@ class GoogleSheets:
             print(not_found, self.date_record, '- Дата занята/не найдена')
             return []
 
-        if self.date_record == datetime.now().strftime('%d.%m.%y'):
+        if self.date_record == datetime.now(tz=tz).strftime('%d.%m.%y'):
             lst = [k.strip() for i in all_val
                    if (self.name_master is None and i[NAME_COL_SERVICE].strip() == self.name_service) or
                    (self.name_master is not None and i[NAME_COL_SERVICE].strip() == self.name_service and
                     i[NAME_COL_MASTER].strip() == self.name_master)
                    for k, v in i.items() if str(v).strip() == '' and
-                   datetime.now().time() < datetime.strptime(k, '%H:%M').time()]
+                   datetime.now(tz=tz).time() < datetime.strptime(k, '%H:%M').time()]
         else:
             lst = [k.strip() for i in all_val
                    if (self.name_master is None and i[NAME_COL_SERVICE].strip() == self.name_service) or
@@ -312,7 +315,7 @@ class GoogleSheets:
                 print(ex)
                 print(sheet_obj.title, '- Добавьте лист в IGNOR_WORKSHEETS')
                 return None
-            date_today = datetime.now()
+            date_today = datetime.now(tz=tz)
             if date_today.date() == date_sheet:
                 with lock:
                     all_val = sheet_obj.get_all_records()
