@@ -61,8 +61,8 @@ def check_phone_number(message):
         def contact(message_contact):
             """Получает объект <contact> -> вызывает функцию стартового меню"""
             if message_contact.contact is not None:
-                CLIENT_PHONE[message.chat.id] = message_contact.contact.phone_number
-                bot.send_message(message.chat.id,
+                CLIENT_PHONE[message_contact.chat.id] = message_contact.contact.phone_number
+                bot.send_message(message_contact.chat.id,
                                  text='Спасибо за доверие!',
                                  reply_markup=ReplyKeyboardRemove())
                 menu(message_contact)
